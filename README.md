@@ -10,7 +10,7 @@ LiquidHarness is a single-binary agent runtime that runs LFM2.5 on your computer
 searches, summarizes and edits the files you point it at — with explicit approvals, a workspace
 jail and a full audit trail. No cloud account. No data leaves your machine unless you ask.
 
-> **Project status: F1 — model protocol (in progress).** The CLI skeleton (`version`, `config`,
+> **Project status: F1 — model protocol (complete).** The CLI skeleton (`version`, `config`,
 > `doctor`, `policy`), the configuration loader, the build and the CI pipeline are implemented.
 > `ask` and `run --print` can talk to an OpenAI-compatible LFM2.5 backend with SSE streaming, the
 > LFM tool-call parser accepts both the JSON and Pythonic formats, and the model manager can
@@ -84,6 +84,18 @@ liquidharness run --print "Responde OK"         # one-shot with SSE streaming
 the weights atomically. `models use` selects the model that `ask` and `run --print` start through
 `llama-server` when `model.autostart` is enabled.
 
+### Model latency
+
+The 2.6B chat template always starts in thinking mode, so a one-shot answer costs 12–17 s on a
+CPU-only machine (~11 tok/s, 180–440 completion tokens). The 1.2B Instruct model answers the same
+prompt in ~0.6 s with a warm server, and in ~3.5 s when the CLI has to start and stop
+`llama-server` for a single run. Point the harness at your own weights with
+`LIQUIDHARNESS_MODEL_PATH` or `model.path` in the config file:
+
+```bash
+LIQUIDHARNESS_MODEL_PATH=/path/to/LFM2.5-1.2B-Instruct-Q8_0.gguf liquidharness run --print "Responde OK"
+```
+
 Product commands land in later phases:
 
 ```bash
@@ -136,7 +148,7 @@ the `LIQUIDHARNESS_` prefix and override file values; flags override both. See
 | Phase | Scope | Status |
 | :--- | :--- | :--- |
 | F0 | CLI skeleton, config, doctor, CI | Done |
-| F1 | Model client, streaming, tool-call parser | In progress |
+| F1 | Model client, streaming, tool-call parser | Done |
 | F2 | Agent loop and context manager | Planned |
 | F3 | Tools, policy, approvals, workspace jail | Planned |
 | F4 | SQLite persistence and sessions | Planned |

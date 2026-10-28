@@ -34,6 +34,7 @@ secrets/
 /models/
 /cache/
 /data/
+/.tools/
 
 # Databases and journals
 *.db
