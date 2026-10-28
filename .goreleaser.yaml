@@ -1,0 +1,102 @@
+version: 2
+
+project_name: liquidharness
+dist: dist
+
+before:
+  hooks:
+    - go mod verify
+    - go test ./...
+
+builds:
+  - id: standard
+    main: ./cmd/liquidharness
+    binary: liquidharness
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/liquidharness/liquidharness/internal/version.Version={{.Version}}
+      - -X github.com/liquidharness/liquidharness/internal/version.Commit={{.Commit}}
+      - -X github.com/liquidharness/liquidharness/internal/version.Date={{.Date}}
+    goos: [windows, darwin, linux]
+    goarch: [amd64, arm64]
+  - id: embedded
+    main: ./cmd/liquidharness
+    binary: liquidharness-embedded
+    env: [CGO_ENABLED=1]
+    tags: [embedded]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/liquidharness/liquidharness/internal/version.Version={{.Version}}
+      - -X github.com/liquidharness/liquidharness/internal/version.Commit={{.Commit}}
+      - -X github.com/liquidharness/liquidharness/internal/version.Date={{.Date}}
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+
+archives:
+  - id: standard
+    ids: [standard]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+  - id: embedded
+    ids: [embedded]
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}-embedded_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: checksums.txt
+
+sboms:
+  - artifacts: archive
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - sign-blob
+      - "--yes"
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+    artifacts: checksum
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^feat'
+      order: 0
+    - title: Fixes
+      regexp: '^fix'
+      order: 1
+    - title: Performance
+      regexp: '^perf'
+      order: 2
+    - title: Documentation
+      regexp: '^docs'
+      order: 3
+  filters:
+    exclude: ['^chore', '^test', '^ci']
+
+release:
+  github:
+    owner: liquidharness
+    name: liquidharness
+  draft: true
+  prerelease: auto
+  footer: |
+    **Verify before running:**
+    ```
+    cosign verify-blob --certificate checksums.txt.pem \
+      --signature checksums.txt.sig checksums.txt
+    sha256sum -c checksums.txt
+    ```

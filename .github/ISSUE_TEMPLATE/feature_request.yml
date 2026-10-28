@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a capability or an improvement.
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do today? Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behaviour, not only the implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - TUI
+        - Agent loop
+        - Tools and policy
+        - Model runtime
+        - RAG and memory
+        - MCP / serve
+        - Installer / distribution
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security impact
+      description: New tools, network access, filesystem scope, approvals, secrets.
+      placeholder: "None, or explain which trust boundary changes."
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This fits the v1 scope (local file/knowledge agent, not a coding agent).
+          required: true

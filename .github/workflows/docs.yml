@@ -1,0 +1,27 @@
+name: docs
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "SECURITY.md"
+      - "CONTRIBUTING.md"
+      - "CHANGELOG.md"
+      - "internal/tui/theme/**"
+      - "scripts/dev/checkdocs/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Check links and code fences
+        run: go run ./scripts/dev/checkdocs

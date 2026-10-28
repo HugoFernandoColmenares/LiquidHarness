@@ -1,0 +1,34 @@
+name: nightly
+# The schedule is enabled in F8, when the eval runner exists. Until then the workflow is
+# manual so a pre-release repository does not accumulate failing scheduled runs.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    name: eval (self-hosted, model cached)
+    runs-on: [self-hosted, linux, x64, lfm]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Ensure model
+        run: sh ./scripts/dev/ensure-model.sh
+      - name: Run eval suites
+        run: |
+          go run ./cmd/liquidharness eval run --dataset core \
+            --model local --report out/core.json
+          go run ./cmd/liquidharness eval run --dataset adversarial \
+            --model local --report out/adversarial.json
+      - name: Gate
+        run: go run ./cmd/liquidharness eval gate --baseline evals/baseline.json --report out/core.json
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: eval-report
+          path: out/

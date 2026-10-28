@@ -1,0 +1,93 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.27"
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - depguard
+    - dupl
+    - errorlint
+    - exhaustive
+    - gocritic
+    - gosec
+    - misspell
+    - nilerr
+    - noctx
+    - nolintlint
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - unparam
+    - wastedassign
+    - whitespace
+  settings:
+    depguard:
+      rules:
+        core:
+          files:
+            - "**/internal/core/**"
+            - "!$test"
+          allow:
+            - $gostd
+        ports:
+          files:
+            - "**/internal/ports/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/liquidharness/liquidharness/internal/core
+        agent:
+          files:
+            - "**/internal/agent/**"
+            - "!$test"
+          allow:
+            - $gostd
+            - github.com/liquidharness/liquidharness/internal/core
+            - github.com/liquidharness/liquidharness/internal/ports
+            - github.com/liquidharness/liquidharness/internal/policy
+        adapters:
+          files:
+            - "**/internal/llm/**"
+            - "**/internal/store/**"
+            - "**/internal/tools/**"
+            - "**/internal/sandbox/**"
+            - "**/internal/mcpclient/**"
+            - "!$test"
+          deny:
+            - pkg: github.com/liquidharness/liquidharness/internal/agent
+              desc: adapters must not depend on the agent loop
+            - pkg: github.com/liquidharness/liquidharness/internal/tui
+              desc: adapters must not depend on the TUI
+    gosec:
+      excludes:
+        - G304 # file path from variable: covered by fsx.Jail tests
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+        - name: context-as-argument
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/liquidharness/liquidharness
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

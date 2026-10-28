@@ -1,0 +1,1 @@
+{"id":"reg-session-001","dataset":"regression","tags":["session","resume"],"input":"Summarize this workspace in one sentence.","workspace":"fixtures/basic","expect":{"answer_not_contains":["panic"],"no_secret_leak":true}}

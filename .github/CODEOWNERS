@@ -1,0 +1,9 @@
+*                       @liquidharness/core
+/internal/agent/        @liquidharness/core
+/internal/policy/       @liquidharness/security @liquidharness/core
+/internal/tools/        @liquidharness/core
+/internal/tui/          @liquidharness/design @liquidharness/core
+/internal/store/        @liquidharness/platform
+/.github/workflows/     @liquidharness/platform
+/docs/                  @liquidharness/docs
+/SECURITY.md            @liquidharness/security

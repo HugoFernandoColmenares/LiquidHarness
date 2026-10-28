@@ -1,0 +1,61 @@
+# Binaries and build output
+/dist/
+/bin/
+/liquidharness
+/liquidharness.exe
+/liquidharness-embedded
+/liquidharness-embedded.exe
+*.test
+*.out
+coverage.txt
+coverage.html
+profile.cov
+
+# Go workspace
+go.work
+go.work.sum
+
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.liquidharness/*
+!.liquidharness/policy.toml.example
+
+# Models and large data
+*.gguf
+*.safetensors
+*.bin
+/models/
+/cache/
+/data/
+
+# Databases and journals
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Screenshots in progress
+docs/screenshots/wip/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# Tooling caches
+.golangci-lint-cache/
+.gocache/
+.tmp/
+tmp/
