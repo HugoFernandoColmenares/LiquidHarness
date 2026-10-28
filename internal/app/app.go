@@ -22,6 +22,7 @@ import (
 type Options struct {
 	Stdout      io.Writer
 	Stderr      io.Writer
+	Stdin       io.Reader
 	LookupEnv   func(string) (string, bool)
 	Getwd       func() (string, error)
 	PathOptions config.PathOptions
@@ -33,6 +34,9 @@ type Options struct {
 type App struct {
 	Stdout io.Writer
 	Stderr io.Writer
+	// Stdin is the interactive input of approval prompts. Nil means non-interactive: every
+	// ask decision is denied unless a shortcut flag approves it.
+	Stdin io.Reader
 
 	Paths  config.Paths
 	Config config.Config
@@ -69,6 +73,7 @@ func New(opts Options) *App {
 	return &App{
 		Stdout:      opts.Stdout,
 		Stderr:      opts.Stderr,
+		Stdin:       opts.Stdin,
 		lookupEnv:   opts.LookupEnv,
 		getwd:       opts.Getwd,
 		pathOptions: opts.PathOptions,

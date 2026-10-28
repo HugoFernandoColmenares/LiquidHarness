@@ -88,7 +88,36 @@ func rejectPlatformPath(rel string) error {
 			return fmt.Errorf("%w: alternate data stream or drive-relative path %q", ErrInvalidPath, rel)
 		}
 	}
+	// Win32 silently strips trailing spaces and dots from every component, so ".. " would
+	// become "..". Device names are rejected because they address hardware, not files.
+	for _, segment := range strings.FieldsFunc(rel, func(r rune) bool { return r == '\\' || r == '/' }) {
+		if segment == "." || segment == ".." {
+			continue
+		}
+		if strings.HasSuffix(segment, " ") || strings.HasSuffix(segment, ".") {
+			return fmt.Errorf("%w: trailing space or dot in %q", ErrInvalidPath, rel)
+		}
+		if isDeviceName(segment) {
+			return fmt.Errorf("%w: reserved device name %q", ErrInvalidPath, rel)
+		}
+	}
 	return nil
+}
+
+// isDeviceName reports whether segment names a Windows character device.
+func isDeviceName(segment string) bool {
+	base := segment
+	if i := strings.IndexByte(base, '.'); i >= 0 {
+		base = base[:i]
+	}
+	switch strings.ToUpper(base) {
+	case "CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9":
+		return true
+	default:
+		return false
+	}
 }
 
 func isDriveLetter(b byte) bool {

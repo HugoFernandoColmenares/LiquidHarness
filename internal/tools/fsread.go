@@ -6,6 +6,8 @@ package tools
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,7 +36,8 @@ func newFSRead(root string) *fsRead {
 		spec: core.ToolSpec{
 			Name: "fs_read",
 			Description: "Read a text file from the workspace. Returns numbered content slices " +
-				"with an optional line offset and limit. Use fs_list or fs_search to find paths.",
+				"with an optional line offset and limit, plus the SHA-256 of the whole file that " +
+				"fs_edit requires. Use fs_list or fs_search to find paths.",
 			InputSchema: json.RawMessage(`{
   "type": "object",
   "properties": {
@@ -64,6 +67,9 @@ type readData struct {
 	Offset    int    `json:"offset"`
 	Content   string `json:"content"`
 	Truncated bool   `json:"truncated"`
+	// SHA256 covers the whole file, not the returned slice, so the model can hand it to
+	// fs_edit as expected_sha256.
+	SHA256 string `json:"sha256"`
 }
 
 func (t *fsRead) Execute(_ context.Context, call core.ToolCall) (core.ToolResult, error) {
@@ -127,12 +133,15 @@ func (t *fsRead) Execute(_ context.Context, call core.ToolCall) (core.ToolResult
 
 	lines := splitLines(string(raw))
 	total := len(lines)
+	sum := sha256.Sum256(raw)
+	digest := "sha256:" + hex.EncodeToString(sum[:])
 	if args.Offset >= total {
 		return newResult(call, readData{
 			Path:    relativeTo(t.root, abs),
 			Lines:   total,
 			Offset:  args.Offset,
 			Content: "",
+			SHA256:  digest,
 		}, false, started), nil
 	}
 	end := min(args.Offset+args.Limit, total)
@@ -145,6 +154,7 @@ func (t *fsRead) Execute(_ context.Context, call core.ToolCall) (core.ToolResult
 		Offset:    args.Offset,
 		Content:   strings.Join(selected, "\n"),
 		Truncated: truncated,
+		SHA256:    digest,
 	}, truncated, started), nil
 }
 

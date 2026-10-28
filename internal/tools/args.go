@@ -18,7 +18,7 @@ import (
 
 // Tool error codes. They are part of the tool protocol and stable across releases.
 const (
-	errInvalidArguments = "INVALID_ARGUMENTS"
+	errInvalidArguments = "INVALID_ARGUMENT"
 	errNotFound         = "NOT_FOUND"
 	errOutsideWorkspace = "OUTSIDE_WORKSPACE"
 	errNotDirectory     = "NOT_DIRECTORY"
@@ -27,7 +27,15 @@ const (
 	errBinaryFile       = "BINARY_FILE"
 	errInvalidPattern   = "INVALID_PATTERN"
 	errIO               = "IO_ERROR"
+	errConflict         = "CONFLICT"
+	errTooLarge         = "TOO_LARGE"
+	errPolicyDenied     = "POLICY_DENIED"
 )
+
+// isOutsideError reports whether err came from the workspace confinement.
+func isOutsideError(err error) bool {
+	return errors.Is(err, fsx.ErrOutsideRoot)
+}
 
 // decodeArgs unmarshals call.Arguments into dst. Empty arguments decode as an empty object.
 func decodeArgs(call core.ToolCall, dst any) *core.ToolError {

@@ -39,7 +39,7 @@ func addAgentFlags(cmd *cobra.Command) {
 	flags.StringP("print", "p", "", "run one prompt and print the answer (no TUI)")
 	flags.Bool("yes", false, "auto-approve R1 actions (never R2+)")
 	flags.Bool("deny", false, "deny every action that requires approval")
-	flags.String("allow-risk", "", "auto-approve up to this risk class (R2, R3 or R4)")
+	flags.String("allow-risk", "", "auto-approve up to this risk class (R1 to R4)")
 }
 
 func newRunCommand(ctx context.Context, a *app.App) *cobra.Command {
@@ -48,10 +48,12 @@ func newRunCommand(ctx context.Context, a *app.App) *cobra.Command {
 		Short: "Run a task with the agent",
 		Long: `Run a task with the agent.
 
-The agent can call the read-only tools (fs_read, fs_list, fs_search) inside the workspace and
+The agent can call the read-only tools (fs_read, fs_list, fs_search) and, in ask or allow mode,
+the write tools (fs_create, fs_edit, fs_delete, fs_move, todo_write) inside the workspace. It
 streams its answer. With --print the answer goes to stdout and tool progress goes to stderr, so
-the command is safe to use in scripts. Without a prompt the interactive TUI opens (planned for
-F5).`,
+the command is safe to use in scripts. Writes that need approval are denied unless --yes,
+--allow-risk or an interactive answer approves them. Without a prompt the interactive TUI opens
+(planned for F5).`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			interactive, _ := cmd.Flags().GetBool("interactive")
@@ -74,7 +76,11 @@ F5).`,
 			if prompt == "" {
 				return notImplemented("run (interactive)", "F5")
 			}
-			return runTurn(ctx, a, prompt)
+			approval, err := approvalFromFlags(cmd)
+			if err != nil {
+				return err
+			}
+			return runTurn(ctx, a, prompt, approval)
 		},
 	}
 	addAgentFlags(cmd)
@@ -82,8 +88,31 @@ F5).`,
 	return cmd
 }
 
-func runTurn(ctx context.Context, a *app.App, prompt string) error {
-	result, err := a.RunTurn(ctx, app.RunOptions{Prompt: prompt})
+func approvalFromFlags(cmd *cobra.Command) (app.ApprovalOptions, error) {
+	var out app.ApprovalOptions
+	yes, _ := cmd.Flags().GetBool("yes")
+	deny, _ := cmd.Flags().GetBool("deny")
+	if yes && deny {
+		return out, core.E(core.CodeUsage, "--yes and --deny are mutually exclusive")
+	}
+	out.Yes = yes
+	out.Deny = deny
+
+	raw, _ := cmd.Flags().GetString("allow-risk")
+	if strings.TrimSpace(raw) == "" {
+		return out, nil
+	}
+	risk, err := core.ParseRisk(raw)
+	if err != nil || risk < core.RiskR1 || risk > core.RiskR4 {
+		return out, core.E(core.CodeUsage,
+			"invalid --allow-risk %q: expected R1, R2, R3 or R4", raw)
+	}
+	out.AllowUpTo = &risk
+	return out, nil
+}
+
+func runTurn(ctx context.Context, a *app.App, prompt string, approval app.ApprovalOptions) error {
+	result, err := a.RunTurn(ctx, app.RunOptions{Prompt: prompt, Approval: approval})
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package app_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,6 +22,16 @@ import (
 
 func newAppWithModel(t *testing.T, replies ...string) (*app.App, *bytes.Buffer, *bytes.Buffer, string) {
 	t.Helper()
+	return newAppWithInput(t, nil, config.Flags{}, replies...)
+}
+
+func newAppWithInput(
+	t *testing.T,
+	stdin io.Reader,
+	flags config.Flags,
+	replies ...string,
+) (*app.App, *bytes.Buffer, *bytes.Buffer, string) {
+	t.Helper()
 	workspace := t.TempDir()
 	base := t.TempDir()
 	stdout := &bytes.Buffer{}
@@ -29,6 +40,7 @@ func newAppWithModel(t *testing.T, replies ...string) (*app.App, *bytes.Buffer, 
 	a := app.New(app.Options{
 		Stdout:    stdout,
 		Stderr:    stderr,
+		Stdin:     stdin,
 		LookupEnv: func(string) (string, bool) { return "", false },
 		Getwd:     func() (string, error) { return workspace, nil },
 		PathOptions: config.PathOptions{
@@ -42,7 +54,7 @@ func newAppWithModel(t *testing.T, replies ...string) (*app.App, *bytes.Buffer, 
 			return llm.NewFake("fake", replies...), nil
 		},
 	})
-	if err := a.Configure(config.Flags{}); err != nil {
+	if err := a.Configure(flags); err != nil {
 		t.Fatalf("configure: %v", err)
 	}
 	return a, stdout, stderr, workspace

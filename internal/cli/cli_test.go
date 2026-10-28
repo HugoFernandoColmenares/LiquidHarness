@@ -187,6 +187,51 @@ func TestPolicyShowJSON(t *testing.T) {
 	}
 }
 
+func TestPolicyTestJSON(t *testing.T) {
+	a := newTestApp(t)
+	output, err := execute(t, a, "policy", "test", "--json")
+	if err != nil {
+		t.Fatalf("policy test: %v", err)
+	}
+
+	var envelope struct {
+		OK   bool `json:"ok"`
+		Data struct {
+			Mode string `json:"mode"`
+			Rows []struct {
+				Tool     string `json:"tool"`
+				Risk     string `json:"risk"`
+				Decision string `json:"decision"`
+				Rule     string `json:"rule"`
+			} `json:"rows"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(output), &envelope); err != nil {
+		t.Fatalf("decode: %v\n%s", err, output)
+	}
+	if !envelope.OK || envelope.Data.Mode != "ask" || len(envelope.Data.Rows) != 8 {
+		t.Fatalf("unexpected policy test: %+v", envelope)
+	}
+	decisions := make(map[string]string, len(envelope.Data.Rows))
+	for _, row := range envelope.Data.Rows {
+		decisions[row.Tool] = row.Decision
+	}
+	if decisions["fs_read"] != "allow" {
+		t.Errorf("fs_read = %q, want allow", decisions["fs_read"])
+	}
+	if decisions["fs_create"] != "ask" || decisions["fs_delete"] != "ask" {
+		t.Errorf("decisions = %+v", decisions)
+	}
+}
+
+func TestPolicyTestUnknownTool(t *testing.T) {
+	a := newTestApp(t)
+	_, err := execute(t, a, "policy", "test", "--tool", "nope")
+	if !core.Is(err, core.CodeUsage) {
+		t.Fatalf("error = %v, want USAGE", err)
+	}
+}
+
 func TestRunPrintUsesModel(t *testing.T) {
 	a := newTestAppWithModel(t, llm.NewFake("fake", "Hola desde el fake"))
 	output, err := execute(t, a, "run", "--print", "hola")

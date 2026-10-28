@@ -253,7 +253,36 @@ default                                    -> ASK
 para saltarse la policy, el jail ni la auditoría; `allow` solo cambia el veredicto por defecto dentro
 de esos límites.
 
-### 5.2 Reglas
+### 5.2 Reglas implementadas (F3)
+
+El motor de F3 es puro (`internal/policy`) y evalúa, en este orden:
+
+1. Riesgo fuera de R0–R5 → `deny` (`invalid-risk`).
+2. Allowlist no vacía y tool ausente → `deny` (`tool-not-in-allowlist`).
+3. `read-only`: R0 → `allow` (`mode-read-only`); R1+ → `deny`.
+4. `ask`: R0 → `allow` (`mode-allow`); R1–R2 → `ask` (`mode-ask-write`); R3+ → `deny`
+   (`risk-too-high`).
+5. `allow`: R0–R2 → `allow` (`mode-allow`); R3+ → `deny` (`risk-too-high`).
+
+La allowlist se configura con `tools.allowlist` en TOML o `LIQUIDHARNESS_TOOLS_ALLOWLIST`; una
+lista vacía significa "todo el catálogo registrado". `liquidharness policy test` imprime la matriz
+tool × riesgo × decisión sin ejecutar ninguna tool.
+
+Una tool puede escalar su riesgo estático desde los argumentos (`ports.RiskAssessor`):
+`fs_create --overwrite` y `fs_move --overwrite` pasan de R1 a R2.
+
+### 5.3 Evaluación de una llamada
+
+1. El loop resuelve la tool y calcula el riesgo efectivo.
+2. `Policy.Decide` devuelve `allow`, `ask` o `deny` con `rule` y `reason`.
+3. `allow` ejecuta; `ask` consulta al `Approver`; `deny` devuelve `POLICY_DENIED` al modelo.
+4. La decisión se emite como evento (`tool.requested` → `tool.approved`/`tool.denied`) y se
+   escribe en la auditoría con el `rule` que la produjo.
+
+### 5.4 DSL de reglas planificado
+
+El DSL con condiciones por tool (`policy.toml`) no está implementado en F3; hoy la configuración
+expresa es `policy.mode` + `tools.allowlist`. El diseño objetivo es:
 
 ```toml
 # .liquidharness/policy.toml
@@ -283,15 +312,10 @@ tool = "shell_exec"
 action = "deny"
 ```
 
-### 5.3 Evaluación
+Prioridad objetivo: reglas específicas antes que globs, `deny` gana sobre `allow`, `ask` gana
+sobre `allow` si el riesgo es mayor, y sin coincidencia se aplica el default por riesgo/modo.
 
-1. Reglas específicas antes que globs.
-2. `deny` gana sobre `allow`.
-3. `ask` gana sobre `allow` si el riesgo es mayor.
-4. Sin coincidencia → default por riesgo/modo.
-5. La decisión se registra con la regla que la produjo (`rule_id`).
-
-### 5.4 Condiciones disponibles
+### 5.5 Condiciones planificadas
 
 | Condición | Ejemplo |
 | :--- | :--- |
@@ -317,32 +341,36 @@ sequenceDiagram
     participant UI as TUI/CLI
     participant H as Humano
 
-    AG->>POL: Authorize(call)
-    POL-->>AG: ask + ApprovalRequest
-    AG->>UI: ApprovalRequested
-    UI->>H: modal con riesgo, args, preview
-    H-->>UI: allow once / allow session / deny
-    UI-->>AG: Decision
-    AG->>AG: ejecutar o denegar
+    AG->>POL: Decide(spec, risk)
+    POL-->>AG: ask + reason
+    AG->>UI: tool.requested
+    UI->>H: prompt con riesgo, razón y argumentos
+    H-->>UI: yes once / always session / no
+    UI-->>AG: ApprovalDecision
+    AG->>AG: tool.approved + ejecutar, o tool.denied
 ```
 
-### 6.2 Contenido del modal
+### 6.2 Contenido del prompt
 
-- Tool y resumen de la acción en lenguaje natural.
-- Path(s) afectados y si están dentro del workspace.
-- Diff/preview para escrituras.
-- Riesgo (R1/R2/…) con color y glifo.
-- Alcance: **una vez**, **esta sesión**, **este workspace** (solo si la config lo permite).
-- Botones/teclas: `a` allow once, `s` allow session, `d` deny, `Esc` deny.
-- Timeout: 5 min → deny (no auto-allow).
+- Tool, riesgo (`R1`, `R2`, …) y la razón de la policy.
+- Argumentos compactos en una línea (máximo 200 caracteres).
+- Respuestas: `y`/`yes` (una vez), `a`/`always` (esta sesión), cualquier otra cosa deniega.
+- Un `always` se recuerda en memoria por nombre de tool y se invalida al terminar el proceso.
+- La vista previa con diff y los botones de la TUI llegan en F5.
 
 ### 6.3 Headless
 
-- Sin TTY: `--yes` permite solo R1; R2+ requiere `--allow-risk=R2` explícito.
-- Sin flags: deny con código 3.
-- En CI, la policy se declara en `.liquidharness/policy.toml` versionado.
+- Sin TTY: `--yes` permite solo R1; R2+ requiere `--allow-risk Rn` explícito.
+- `--allow-risk Rn` permite hasta Rn inclusive; `--deny` deniega todo lo que requiera aprobación.
+- Sin flags ni entrada interactiva, un `ask` se convierte en denegación.
+- Una denegación vuelve al modelo como resultado `POLICY_DENIED` para que explique o pida
+  permiso; el turno puede terminar con respuesta y código 0. El código 3 se reserva para un error
+  de policy que aborta el turno.
+- En CI, la policy se declara con `policy.mode` y `tools.allowlist` versionados.
 
 ### 6.4 Persistencia
+
+En F3 el alcance `session` vive en memoria dentro del `Approver`; F4 lo persiste en SQLite:
 
 ```sql
 INSERT INTO approvals (id, session_id, tool_call_id, decision, scope, reason, created_at)
@@ -350,7 +378,7 @@ VALUES (?, ?, ?, 'allow', 'session', 'user approved fs_edit', ?);
 ```
 
 - `scope=session` se guarda en memoria y se invalida al cambiar de workspace.
-- `scope=workspace` requiere confirmación adicional y se escribe en config.
+- `scope=workspace` requiere confirmación adicional y se escribe en config (F4).
 - Nunca se auto-aprueba R3/R4 por scope.
 
 ---
@@ -428,10 +456,11 @@ func (j *Jail) Resolve(requested string) (string, error) {
 | :--- | :--- | :--- |
 | `path` | string | Relativo al workspace |
 | `offset` | integer | Línea inicial (0-based) |
-| `limit` | integer | 1–2000, default 500 |
-| `max_bytes` | integer | Default 262144 |
+| `limit` | integer | 1–2000, default 400 |
 
-Devuelve `content`, `lines`, `sha256`, `truncated`, `next_offset`, `encoding`.
+Devuelve `path`, `lines`, `offset`, `content`, `truncated` y `sha256`. El `sha256` cubre el
+archivo completo, no el slice devuelto, y es exactamente el valor que `fs_edit` exige en
+`expected_sha256`.
 Errores: `NOT_FOUND`, `BINARY_FILE`, `TOO_LARGE`, `OUTSIDE_WORKSPACE`.
 
 ### 8.2 `fs_list` — R0
@@ -479,7 +508,7 @@ Errores: `CONFLICT` si existe y `overwrite=false`, `TOO_LARGE`, `OUTSIDE_WORKSPA
 | Campo | Tipo | Notas |
 | :--- | :--- | :--- |
 | `path` | string | Dentro del workspace |
-| `expected_sha256` | string | **Obligatorio** |
+| `expected_sha256` | string | **Obligatorio**; sale de `fs_read` o del `sha256` de un `fs_edit` previo |
 | `edits[]` | array | `old`, `new`, `replace_all` |
 
 Semántica:
@@ -505,7 +534,7 @@ Límites: 20 edits, 1 MiB, `old` ≤ 64 KiB.
 | `permanent` | boolean | Default false |
 
 Default: mover a `.liquidharness/trash/<timestamp>/<path>` (recuperable).
-`permanent=true` requiere aprobación R2 y confirmación adicional.
+`permanent=true` borra en el sitio; al ser R2 pasa por la aprobación normal y queda auditado.
 Devuelve `trashed_to` o `deleted`.
 
 ### 8.7 `fs_move` — R1/R2
@@ -568,7 +597,8 @@ No muta el FS; actualiza el estado de la sesión y la UI.
 | `question` | string | ≤ 500 |
 | `options[]` | array | 2–5 opciones |
 
-En headless: `UNSUPPORTED` salvo `--non-interactive=default`.
+No se registra en F3: `run --print` es headless y la tool siempre respondería `UNSUPPORTED`. La
+TUI de F5 la habilitará con el mismo contrato.
 
 ### 8.14 `shell_exec` — R3 (opt-in)
 
@@ -705,7 +735,9 @@ Un servidor MCP puede incluir instrucciones maliciosas en la descripción de una
 
 ## 11. Auditoría
 
-Cada ejecución produce un registro:
+Cada tool call produce una línea JSONL en
+`<workspace>/.liquidharness/audit/audit-YYYYMMDD.jsonl`. El archivo se abre en modo append y rota
+a medianoche UTC:
 
 ```json
 {
@@ -718,7 +750,7 @@ Cada ejecución produce un registro:
   "args_hash": "sha256:...",
   "args_redacted": {"path": "docs/notes.md", "edits": 2},
   "decision": "allow",
-  "rule_id": "rule-fs-edit",
+  "rule_id": "mode-ask-write",
   "approved_by": "user",
   "approval_scope": "session",
   "result": "ok",
@@ -729,9 +761,13 @@ Cada ejecución produce un registro:
 ```
 
 - `args_hash` permite correlacionar sin guardar contenido sensible.
-- `args_redacted` es un resumen estructural.
-- Retención configurable (default 90 días).
-- Export JSONL para SIEM.
+- `args_redacted` conserva escalares (`path`, `overwrite`, …) y sustituye cuerpos por
+  `*_bytes` o por el número de elementos.
+- `decision` es `allow` o `deny`; `result` es `ok`, `error` o `denied`.
+- `approved_by` es `user` (prompt interactivo) o `flag` (`--yes`, `--allow-risk`).
+- Un fallo de escritura de auditoría se registra en el log y no aborta el turno.
+- Retención configurable (default 90 días) y `sessions export` llegan en F4; el formato ya es
+  JSONL apto para SIEM.
 
 ---
 
@@ -769,6 +805,10 @@ Cada ejecución produce un registro:
 | TV-18 | MCP tool con descripción maliciosa | marcada + ask |
 | TV-19 | Cancelación durante tool | `CANCELLED`, sin efectos parciales |
 | TV-20 | Repetición idéntica 3× | warning; 4× → stop |
+
+En F3 pasan TV-01…TV-15, TV-19 y TV-20 en `internal/tools`, `internal/fsx` y
+`internal/agent`. TV-16, TV-17 y TV-18 corresponden a `shell_exec`, `http_fetch` y tools MCP, que
+no existen todavía: se validarán en F7 junto con el sandbox.
 
 ---
 

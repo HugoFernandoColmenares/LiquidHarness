@@ -208,7 +208,34 @@ func (r *registryStub) Names() []string {
 	return names
 }
 
+// allowAll is a test policy that permits every call, including R2+.
+type allowAll struct{}
+
+func (allowAll) Decide(core.ToolSpec, core.RiskClass) ports.Decision {
+	return ports.Decision{Outcome: ports.OutcomeAllow, Rule: "test-allow"}
+}
+
+// denyAll is a test policy that refuses every call.
+type denyAll struct{}
+
+func (denyAll) Decide(core.ToolSpec, core.RiskClass) ports.Decision {
+	return ports.Decision{Outcome: ports.OutcomeDeny, Rule: "test-deny", Reason: "denied by test"}
+}
+
 func newLoop(t *testing.T, model ports.Model, registry ports.ToolRegistry, log *eventLog, mutate func(*agent.Config)) *agent.Loop {
+	t.Helper()
+	return newLoopWith(t, model, registry, log, allowAll{}, nil, mutate)
+}
+
+func newLoopWith(
+	t *testing.T,
+	model ports.Model,
+	registry ports.ToolRegistry,
+	log *eventLog,
+	policy ports.Policy,
+	approver ports.Approver,
+	mutate func(*agent.Config),
+) *agent.Loop {
 	t.Helper()
 	cfg := agent.Config{
 		SystemPrompt: "system prompt",
@@ -221,11 +248,13 @@ func newLoop(t *testing.T, model ports.Model, registry ports.ToolRegistry, log *
 		mutate(&cfg)
 	}
 	loop, err := agent.NewLoop(agent.Deps{
-		Model:   model,
-		Tools:   registry,
-		Now:     func() time.Time { return time.Unix(0, 0) },
-		NewID:   func() string { return "id" },
-		Emitter: emitter(log),
+		Model:    model,
+		Tools:    registry,
+		Policy:   policy,
+		Approver: approver,
+		Now:      func() time.Time { return time.Unix(0, 0) },
+		NewID:    func() string { return "id" },
+		Emitter:  emitter(log),
 	}, cfg)
 	if err != nil {
 		t.Fatalf("NewLoop: %v", err)

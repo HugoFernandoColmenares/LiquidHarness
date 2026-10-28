@@ -10,16 +10,19 @@ LiquidHarness is a single-binary agent runtime that runs LFM2.5 on your computer
 searches, summarizes and edits the files you point it at — with explicit approvals, a workspace
 jail and a full audit trail. No cloud account. No data leaves your machine unless you ask.
 
-> **Project status: F2 — agent loop (complete).** The CLI skeleton (`version`, `config`, `doctor`,
-> `policy`), the configuration loader, the build and the CI pipeline are implemented. `ask` talks
-> to an OpenAI-compatible LFM2.5 backend, and `run --print` drives a full agent turn: SSE streaming,
-> budget and loop detection, context trimming and extractive compaction, parallel read-only tools
-> (`fs_read`, `fs_list`, `fs_search`) confined to the workspace, and ordered lifecycle events. The
-> LFM tool-call parser accepts both the JSON and Pythonic formats, and the model manager can
-> download, resume, verify and select GGUF weights. Write tools, approvals, storage, the TUI and
-> installers are **not** implemented yet; `serve`, `rag`, `memory`, `eval` and the other product
-> commands currently return `not implemented` and exit with code 1. See the [roadmap](#roadmap)
-> and [`docs/files/08-implementation-plan.md`](docs/files/08-implementation-plan.md).
+> **Project status: F3 — safe execution (complete).** The CLI skeleton (`version`, `config`,
+> `doctor`, `policy`), the configuration loader, the build and the CI pipeline are implemented.
+> `ask` talks to an OpenAI-compatible LFM2.5 backend, and `run --print` drives a full agent turn:
+> SSE streaming, budget and loop detection, context trimming and extractive compaction, parallel
+> read-only tools (`fs_read`, `fs_list`, `fs_search`) and, in `ask` or `allow` mode, the write
+> tools (`fs_create`, `fs_edit`, `fs_delete`, `fs_move`, `todo_write`) confined to the workspace.
+> Every tool call is authorized by the policy engine, approvals are explicit (`--yes`,
+> `--allow-risk`, `--deny` or an interactive prompt) and every decision is appended to a JSONL
+> audit log. The LFM tool-call parser accepts both the JSON and Pythonic formats, and the model
+> manager can download, resume, verify and select GGUF weights. Storage, the TUI and installers
+> are **not** implemented yet; `serve`, `rag`, `memory`, `eval` and the other product commands
+> currently return `not implemented` and exit with code 1. See the [roadmap](#roadmap) and
+> [`docs/files/08-implementation-plan.md`](docs/files/08-implementation-plan.md).
 
 ## Why
 
@@ -81,14 +84,26 @@ liquidharness models use lfm25-2.6b-q5km
 liquidharness ask "What is a workspace jail?"   # one-shot, no tools
 liquidharness run --print "Responde OK"         # one-shot with SSE streaming
 liquidharness run --print "Read README.md and summarize the project"  # agent loop + fs_read
+liquidharness run --print "Create docs/notes.md" --yes                 # approve R1 writes
+liquidharness run --print "Delete docs/old.md" --allow-risk R2         # approve up to R2
+liquidharness run --print "Delete docs/old.md" --deny                  # deny every approval
+liquidharness policy test                       # policy decisions without running tools
 ```
 
-`run --print` now drives the agent loop: the model can call `fs_read`, `fs_list` and `fs_search`
-inside the workspace, results are fed back, and the turn ends with a streamed answer. Tool
-progress goes to stderr so stdout stays scriptable; `--json` returns a single envelope with
+`run --print` drives the agent loop: the model can call `fs_read`, `fs_list` and `fs_search`
+inside the workspace, plus `fs_create`, `fs_edit`, `fs_delete`, `fs_move` and `todo_write` when
+the mode is `ask` or `allow`. Results are fed back, and the turn ends with a streamed answer.
+Tool progress goes to stderr so stdout stays scriptable; `--json` returns a single envelope with
 `stop_reason`, `steps`, `tool_calls` and `usage`. The turn is bounded by
 `agent.max_steps`, `agent.max_tool_calls`, `agent.max_turn_duration` and the model context window;
 old history is trimmed and compacted instead of overflowing.
+
+Writes follow the policy: `read-only` hides them entirely, `ask` prompts before every R1/R2 call,
+and `allow` runs them without prompting but still refuses R3+. `--yes` auto-approves R1 only,
+`--allow-risk Rn` auto-approves up to Rn, and `--deny` refuses every call that needs approval. In
+a non-interactive process without a shortcut, an `ask` decision becomes a denial. Every decision
+is appended to `<workspace>/.liquidharness/audit/audit-YYYYMMDD.jsonl` with the tool, risk class,
+argument hash, redacted arguments, decision, approver, result, duration and byte count.
 
 `models pull` resumes interrupted downloads, verifies the SHA-256 from the manifest and installs
 the weights atomically. `models use` selects the model that `ask` and `run --print` start through
@@ -131,8 +146,10 @@ you → TUI/CLI → agent loop → LFM2.5 (llama-server)
 
 - The model is untrusted input; its tool calls are validated against JSON Schema.
 - Writes and deletes require approval by default (`ask` policy).
+- `fs_edit` requires the SHA-256 of the file it is editing, so a stale write fails with `CONFLICT`.
+- Deletes move the entry to `.liquidharness/trash/` unless `permanent=true` is explicit.
 - Shell and network tools are disabled unless you enable them.
-- Every action is audited locally.
+- Every action is audited locally as append-only JSONL.
 
 See [SECURITY.md](SECURITY.md) for the threat model and reporting process.
 
@@ -160,7 +177,7 @@ the `LIQUIDHARNESS_` prefix and override file values; flags override both. See
 | F0 | CLI skeleton, config, doctor, CI | Done |
 | F1 | Model client, streaming, tool-call parser | Done |
 | F2 | Agent loop and context manager | Done |
-| F3 | Tools, policy, approvals, workspace jail | Planned |
+| F3 | Tools, policy, approvals, workspace jail | Done |
 | F4 | SQLite persistence and sessions | Planned |
 | F5 | Bubble Tea TUI | Planned |
 | F6 | RAG and memory | Planned |

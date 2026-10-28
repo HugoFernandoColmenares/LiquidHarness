@@ -635,11 +635,14 @@ sequenceDiagram
 
 ### 6.3 Implementación
 
-> Nota de F2: el bloque siguiente es el diseño original. La implementación real está en
-> `internal/agent/loop.go` y difiere en tres puntos: `Deps` recibe `ports.Emitter` y funciones
-> `Now`/`NewID` inyectables; `Run(ctx, sessionID, input)` devuelve `agent.Result` con
-> `stop_reason`, pasos, tool calls, uso y número de eventos; y el modelo se consume con
-> `Model.Stream` para emitir `model.delta`. `Policy`, `Approver` y `Recorder` llegan en F3/F4.
+> Nota de F3: el bloque siguiente es el diseño original. La implementación real está en
+> `internal/agent/loop.go` y difiere en cuatro puntos: `Deps` recibe `ports.Emitter`, `ports.Policy`,
+> `ports.Approver` y funciones `Now`/`NewID` inyectables; `Run(ctx, sessionID, input)` devuelve
+> `agent.Result` con `stop_reason`, pasos, tool calls, uso y número de eventos; el modelo se consume
+> con `Model.Stream` para emitir `model.delta`; y la autorización ocurre antes de ejecutar cada tool
+> (`tool.requested` → `tool.approved`/`tool.denied` → `tool.started` → `tool.finished`). La
+> auditoría es un decorador de `ports.Emitter` en `internal/app`, no un `Recorder` dentro del loop;
+> el `Recorder` persistente llega con la base de datos de F4.
 
 ```go
 package agent

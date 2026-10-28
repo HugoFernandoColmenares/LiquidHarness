@@ -104,6 +104,7 @@ func TestFSRead(t *testing.T) {
 		Offset    int    `json:"offset"`
 		Content   string `json:"content"`
 		Truncated bool   `json:"truncated"`
+		SHA256    string `json:"sha256"`
 	}](t, result)
 	if data.Path != "README.md" || data.Lines != 3 {
 		t.Errorf("data = %+v", data)
@@ -111,14 +112,22 @@ func TestFSRead(t *testing.T) {
 	if data.Content != "# Demo\nsecond line\nthird line" {
 		t.Errorf("content = %q", data.Content)
 	}
+	whole := hashOf("# Demo\nsecond line\nthird line\n")
+	if data.SHA256 != whole {
+		t.Errorf("sha256 = %q, want %q", data.SHA256, whole)
+	}
 
 	slice := execute(t, registry, "fs_read", `{"path":"README.md","offset":1,"limit":1}`)
 	sliceData := decode[struct {
 		Content   string `json:"content"`
 		Truncated bool   `json:"truncated"`
+		SHA256    string `json:"sha256"`
 	}](t, slice)
 	if sliceData.Content != "second line" || !sliceData.Truncated {
 		t.Errorf("slice = %+v", sliceData)
+	}
+	if sliceData.SHA256 != whole {
+		t.Errorf("slice sha256 = %q, want the whole-file hash %q", sliceData.SHA256, whole)
 	}
 	if !slice.Meta.Truncated {
 		t.Error("meta.truncated = false")
@@ -137,8 +146,8 @@ func TestFSReadErrors(t *testing.T) {
 		{"directory", `{"path":"docs"}`, "IS_DIRECTORY"},
 		{"escape", `{"path":"../outside.txt"}`, "OUTSIDE_WORKSPACE"},
 		{"binary", `{"path":"binary.dat"}`, "BINARY_FILE"},
-		{"no path", `{}`, "INVALID_ARGUMENTS"},
-		{"bad json", `{`, "INVALID_ARGUMENTS"},
+		{"no path", `{}`, "INVALID_ARGUMENT"},
+		{"bad json", `{`, "INVALID_ARGUMENT"},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {

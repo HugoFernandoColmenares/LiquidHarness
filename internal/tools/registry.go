@@ -82,6 +82,12 @@ func (r *Registry) Specs() []core.ToolSpec {
 // Len returns the number of registered tools.
 func (r *Registry) Len() int { return len(r.tools) }
 
+// Options bounds the write tools of a workspace.
+type Options struct {
+	// MaxWriteBytes caps fs_create content and fs_edit results. Zero means 1 MiB.
+	MaxWriteBytes int64
+}
+
 // NewReadOnly builds the F2 catalog: fs_read, fs_list and fs_search, all confined to root.
 func NewReadOnly(root string) (*Registry, error) {
 	registry := NewRegistry()
@@ -89,6 +95,28 @@ func NewReadOnly(root string) (*Registry, error) {
 		newFSRead(root),
 		newFSList(root),
 		newFSSearch(root),
+	} {
+		if err := registry.Register(tool); err != nil {
+			return nil, err
+		}
+	}
+	return registry, nil
+}
+
+// NewWorkspace builds the F3 catalog: the read-only tools plus fs_create, fs_edit, fs_delete,
+// fs_move and todo_write. Callers in read-only mode must use NewReadOnly so the model never sees
+// a write tool it cannot use.
+func NewWorkspace(root string, opts Options) (*Registry, error) {
+	registry := NewRegistry()
+	for _, tool := range []ports.Tool{
+		newFSRead(root),
+		newFSList(root),
+		newFSSearch(root),
+		newFSCreate(root, opts.MaxWriteBytes),
+		newFSEdit(root, opts.MaxWriteBytes),
+		newFSDelete(root),
+		newFSMove(root),
+		newTodoWrite(),
 	} {
 		if err := registry.Register(tool); err != nil {
 			return nil, err

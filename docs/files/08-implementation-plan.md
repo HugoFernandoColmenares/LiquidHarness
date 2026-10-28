@@ -314,29 +314,43 @@ permiso.
 
 **Entregables**
 
-- `internal/fsx/jail.go`: resolución canónica, symlinks, `..`, UNC, ADS, case-insensitivity, TOCTOU.
-- `internal/policy`: motor de reglas, modos (`read-only`/`ask`/`allow`), condiciones, riesgo R0–R5.
-- `internal/tools`: `fs_create`, `fs_edit`, `fs_delete`, `fs_move`, `todo_write`, `ask_user`.
-- Aprobaciones en CLI: prompt interactivo, `--yes` (R1), `--allow-risk=Rn` (R2+), `--deny`, `--approval-policy`.
-- Auditoría: `events` + JSONL append-only con hash de argumentos.
-- `internal/sandbox`: base para `shell_exec` (opt-in, F3.5 si Q-03 se aprueba).
-- Suite adversarial de path jail (≥ 40 vectores).
+- `internal/fsx/within.go` + `write.go`: resolución canónica, symlinks, `..`, UNC, ADS, trailing
+  spaces/dots, nombres de dispositivo, case-insensitivity y `ResolveForWrite`/`AtomicWrite`.
+- `internal/policy`: motor puro con modos (`read-only`/`ask`/`allow`), allowlist y riesgo R0–R5.
+- `internal/tools`: `fs_create`, `fs_edit`, `fs_delete`, `fs_move`, `todo_write`.
+- Aprobaciones en CLI: prompt interactivo, `--yes` (R1), `--allow-risk Rn` (R1–R4), `--deny`.
+- Auditoría: decorador de `ports.Emitter` + JSONL append-only en
+  `<workspace>/.liquidharness/audit/` con hash y argumentos redactados.
+- Suite adversarial de path jail (48 vectores en `internal/fsx/jail_test.go`).
 - `liquidharness policy test` para validar reglas sin ejecutar tools.
+
+Pendiente por diseño: `ask_user` (F5, necesita TUI), `--approval-policy` (sustituido por
+`--allow-risk`), `internal/sandbox` y `shell_exec` (F7/F3.5).
 
 **Criterios de salida**
 
-- [ ] 0 escapes en la suite adversarial (symlink a `/etc`, `..%2f`, UNC, ADS, mayúsculas, hardlink).
-- [ ] Toda escritura pasa por `fsx.AtomicWrite` (temp + rename + fsync) y verifica el hash previo.
-- [ ] `fs_edit` falla con código 9 si el archivo cambió desde la lectura (conflicto).
-- [ ] Las tools R2+ no se ejecutan sin aprobación en modo `ask`; en `read-only` devuelven `POLICY_DENIED`.
-- [ ] El audit log permite reconstruir qué se intentó, qué se aprobó y qué se ejecutó.
-- [ ] `shell_exec` está deshabilitado por defecto y, si se habilita, corre con timeout, límites y allowlist.
-- [ ] Los 20 vectores de [`05-tool-protocol.md`](./05-tool-protocol.md) §13 pasan.
+- [x] 0 escapes en la suite adversarial (symlink a `/etc`, `..%2f`, UNC, ADS, mayúsculas,
+  trailing spaces/dots). El hardlink se documenta como límite de F3: el path queda dentro, pero
+  el contenido puede compartirse; la identidad de archivo llega con el sandbox de F7.
+- [x] Toda escritura pasa por `fsx.AtomicWrite` (temp + rename + fsync) y `fs_edit` verifica el
+  hash previo.
+- [x] `fs_edit` falla con código 9 (`CONFLICT`) si el archivo cambió desde la lectura.
+- [x] Las tools R1/R2 no se ejecutan sin aprobación en modo `ask`; en `read-only` no se registran
+  y una llamada devuelve `UNKNOWN_TOOL`. La denegación de una tool registrada devuelve
+  `POLICY_DENIED` al modelo.
+- [x] El audit log permite reconstruir qué se intentó, qué se aprobó y qué se ejecutó.
+- [x] `shell_exec` no está registrado; la base del sandbox queda para F7.
+- [x] Pasan TV-01…TV-15, TV-19 y TV-20 de [`05-tool-protocol.md`](./05-tool-protocol.md) §13.
+  TV-16…TV-18 dependen de tools que aún no existen (F7).
+
+**Validación F3:** `go test ./...` verde, `go vet` limpio, `gofumpt` limpio, `golangci-lint` 0
+issues y `checkdocs` OK.
 
 **Demo:** pedir borrar un archivo, denegar, verificar que no se borró y que quedó auditado.
 
-**Riesgos:** TOCTOU en Windows (mitigación: abrir con `FILE_FLAG_OPEN_REPARSE_POINT` y validar handle);
-aprobaciones que interrumpen el flujo (mitigación: "allow for session" con scope explícito y visible).
+**Riesgos:** TOCTOU en Windows (mitigación futura: abrir con `FILE_FLAG_OPEN_REPARSE_POINT` y
+validar handle); aprobaciones que interrumpen el flujo (mitigación implementada: "always" con
+scope de sesión explícito y visible).
 
 ---
 

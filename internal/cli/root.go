@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,7 +24,7 @@ const skipConfigAnnotation = "liquidharness/skip-config"
 
 // Execute runs the CLI and returns the process exit code. Every error is rendered exactly once.
 func Execute(ctx context.Context, args []string, stdout, stderr io.Writer) int {
-	a := app.New(app.Options{Stdout: stdout, Stderr: stderr})
+	a := app.New(app.Options{Stdout: stdout, Stderr: stderr, Stdin: os.Stdin})
 	root := NewRootCommand(ctx, a)
 	root.SetArgs(args)
 	root.SetOut(stdout)

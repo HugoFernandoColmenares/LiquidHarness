@@ -19,7 +19,7 @@ Controles no negociables de v1:
 | :- | :--- | :--- | :--- |
 | C-01 | Policy determinista antes de ejecutar | `internal/policy` | Tests de tabla + evals adversariales |
 | C-02 | Aprobación explícita para R2+ | Modal TUI / flag headless | Tests de flujo + auditoría |
-| C-03 | Workspace jail en resolución de paths | `internal/fsx.Jail` | ≥ 40 vectores adversariales |
+| C-03 | Workspace jail en resolución de paths | `internal/fsx.ResolveWithin` / `ResolveForWrite` | 48 vectores adversariales |
 | C-04 | Shell y red deshabilitados por defecto | Config + policy | Test de arranque |
 | C-05 | Resultados de tools son datos, no instrucciones | Context manager + delimitadores | Corpus de inyección |
 | C-06 | Secretos fuera de prompts, logs y auditoría | Keyring + redacción | Tests con patrones sintéticos |
@@ -204,6 +204,17 @@ Los eventos sospechosos se registran como `security.*` en la auditoría y se mue
 
 Garantizar que toda operación de archivos resuelve a una ruta **dentro** del workspace configurado,
 incluso con symlinks, junctions, rutas relativas, UNC, ADS, mayúsculas y carreras.
+
+> **Estado F3.** Implementado en `internal/fsx`: resolución canónica con `EvalSymlinks` sobre el
+> prefijo existente, rechazo de `..`, absolutos externos, symlinks que escapan, UNC, ADS,
+> drive-relative, device paths, nombres reservados y componentes con espacio/punto final;
+> comparación case-insensitive en Windows; `ResolveForWrite` rechaza el root y directorios;
+> `AtomicWrite` usa temp + fsync + rename. La suite `jail_test.go` cubre 48 vectores.
+>
+> Pendiente para F7: denylist de archivos sensibles (`.env`, claves), validación por handle para
+> cerrar TOCTOU, detección de hardlinks por file ID, short names 8.3, paths largos y `fsync` del
+> directorio. Un hardlink creado dentro del workspace resuelve a una ruta interna, pero su
+> contenido puede compartirse con un archivo externo: el path jail no lo detecta.
 
 ### 5.2 Algoritmo de resolución
 
