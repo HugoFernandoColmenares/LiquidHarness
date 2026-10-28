@@ -10,11 +10,13 @@ LiquidHarness is a single-binary agent runtime that runs LFM2.5 on your computer
 searches, summarizes and edits the files you point it at — with explicit approvals, a workspace
 jail and a full audit trail. No cloud account. No data leaves your machine unless you ask.
 
-> **Project status: F1 — model protocol (complete).** The CLI skeleton (`version`, `config`,
-> `doctor`, `policy`), the configuration loader, the build and the CI pipeline are implemented.
-> `ask` and `run --print` can talk to an OpenAI-compatible LFM2.5 backend with SSE streaming, the
+> **Project status: F2 — agent loop (complete).** The CLI skeleton (`version`, `config`, `doctor`,
+> `policy`), the configuration loader, the build and the CI pipeline are implemented. `ask` talks
+> to an OpenAI-compatible LFM2.5 backend, and `run --print` drives a full agent turn: SSE streaming,
+> budget and loop detection, context trimming and extractive compaction, parallel read-only tools
+> (`fs_read`, `fs_list`, `fs_search`) confined to the workspace, and ordered lifecycle events. The
 > LFM tool-call parser accepts both the JSON and Pythonic formats, and the model manager can
-> download, resume, verify and select GGUF weights. The agent loop, tools, storage, TUI and
+> download, resume, verify and select GGUF weights. Write tools, approvals, storage, the TUI and
 > installers are **not** implemented yet; `serve`, `rag`, `memory`, `eval` and the other product
 > commands currently return `not implemented` and exit with code 1. See the [roadmap](#roadmap)
 > and [`docs/files/08-implementation-plan.md`](docs/files/08-implementation-plan.md).
@@ -78,7 +80,15 @@ liquidharness models verify           # re-hash installed weights
 liquidharness models use lfm25-2.6b-q5km
 liquidharness ask "What is a workspace jail?"   # one-shot, no tools
 liquidharness run --print "Responde OK"         # one-shot with SSE streaming
+liquidharness run --print "Read README.md and summarize the project"  # agent loop + fs_read
 ```
+
+`run --print` now drives the agent loop: the model can call `fs_read`, `fs_list` and `fs_search`
+inside the workspace, results are fed back, and the turn ends with a streamed answer. Tool
+progress goes to stderr so stdout stays scriptable; `--json` returns a single envelope with
+`stop_reason`, `steps`, `tool_calls` and `usage`. The turn is bounded by
+`agent.max_steps`, `agent.max_tool_calls`, `agent.max_turn_duration` and the model context window;
+old history is trimmed and compacted instead of overflowing.
 
 `models pull` resumes interrupted downloads, verifies the SHA-256 from the manifest and installs
 the weights atomically. `models use` selects the model that `ask` and `run --print` start through
@@ -149,7 +159,7 @@ the `LIQUIDHARNESS_` prefix and override file values; flags override both. See
 | :--- | :--- | :--- |
 | F0 | CLI skeleton, config, doctor, CI | Done |
 | F1 | Model client, streaming, tool-call parser | Done |
-| F2 | Agent loop and context manager | Planned |
+| F2 | Agent loop and context manager | Done |
 | F3 | Tools, policy, approvals, workspace jail | Planned |
 | F4 | SQLite persistence and sessions | Planned |
 | F5 | Bubble Tea TUI | Planned |

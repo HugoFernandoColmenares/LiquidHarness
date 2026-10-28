@@ -635,6 +635,12 @@ sequenceDiagram
 
 ### 6.3 Implementación
 
+> Nota de F2: el bloque siguiente es el diseño original. La implementación real está en
+> `internal/agent/loop.go` y difiere en tres puntos: `Deps` recibe `ports.Emitter` y funciones
+> `Now`/`NewID` inyectables; `Run(ctx, sessionID, input)` devuelve `agent.Result` con
+> `stop_reason`, pasos, tool calls, uso y número de eventos; y el modelo se consume con
+> `Model.Stream` para emitir `model.delta`. `Policy`, `Approver` y `Recorder` llegan en F3/F4.
+
 ```go
 package agent
 
@@ -783,27 +789,19 @@ el hash del resultado.
 ### 6.6 Presupuestos
 
 ```go
+// internal/agent/budget.go
 type Budget struct {
-	Steps        int
-	ToolCalls    int
-	PromptTokens int
-	OutputTokens int
-	Deadline     time.Time
+	MaxSteps     int       // 0 disables the limit
+	MaxToolCalls int       // 0 disables the limit
+	Deadline     time.Time // zero disables the limit
 }
 
-func (b *Budget) Check() error {
-	switch {
-	case b.Steps <= 0:
-		return core.ErrBudgetSteps
-	case b.ToolCalls < 0:
-		return core.ErrBudgetTools
-	case time.Now().After(b.Deadline):
-		return core.ErrBudgetTime
-	default:
-		return nil
-	}
-}
+func (b Budget) Check(now time.Time, steps, toolCalls int) error
 ```
+
+El presupuesto de tokens no es un contador aparte: `ContextManager` deriva el espacio disponible de
+`context_window - reserva_de_salida - system_prompt - tool_schemas` y compacta o devuelve
+`CONTEXT_OVERFLOW` (código 10) cuando no cabe.
 
 Los warnings se inyectan como mensaje de sistema al 75 % y 90 %:
 

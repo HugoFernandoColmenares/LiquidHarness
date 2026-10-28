@@ -48,8 +48,10 @@ func newRunCommand(ctx context.Context, a *app.App) *cobra.Command {
 		Short: "Run a task with the agent",
 		Long: `Run a task with the agent.
 
-With --print the answer goes to stdout and logs go to stderr, so the command is safe to use
-in scripts. Without a prompt the interactive TUI opens (planned for F5).`,
+The agent can call the read-only tools (fs_read, fs_list, fs_search) inside the workspace and
+streams its answer. With --print the answer goes to stdout and tool progress goes to stderr, so
+the command is safe to use in scripts. Without a prompt the interactive TUI opens (planned for
+F5).`,
 		Args: cobra.ArbitraryArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			interactive, _ := cmd.Flags().GetBool("interactive")
@@ -72,12 +74,26 @@ in scripts. Without a prompt the interactive TUI opens (planned for F5).`,
 			if prompt == "" {
 				return notImplemented("run (interactive)", "F5")
 			}
-			return runAsk(ctx, a, prompt)
+			return runTurn(ctx, a, prompt)
 		},
 	}
 	addAgentFlags(cmd)
 	cmd.Flags().BoolP("interactive", "i", false, "open the interactive TUI")
 	return cmd
+}
+
+func runTurn(ctx context.Context, a *app.App, prompt string) error {
+	result, err := a.RunTurn(ctx, app.RunOptions{Prompt: prompt})
+	if err != nil {
+		return err
+	}
+	if a.JSON {
+		return a.PrintJSON(result)
+	}
+	if !strings.HasSuffix(result.Answer, "\n") {
+		a.Printf("\n")
+	}
+	return nil
 }
 
 func newAskCommand(ctx context.Context, a *app.App) *cobra.Command {

@@ -45,6 +45,8 @@ linters:
           allow:
             - $gostd
             - github.com/HugoFernandoColmenares/LiquidHarness/internal/core
+            # porttest is a subpackage of ports and drives the interfaces it tests.
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/ports
         agent:
           files:
             - "**/internal/agent/**"
@@ -70,6 +72,8 @@ linters:
     gosec:
       excludes:
         - G304 # file path from variable: covered by fsx.Jail tests
+    exhaustive:
+      default-signifies-exhaustive: true
     revive:
       rules:
         - name: exported

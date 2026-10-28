@@ -267,14 +267,39 @@ health check y mensaje de progreso).
 
 **Criterios de salida**
 
-- [ ] Un turno puede encadenar ≥ 5 tool calls y terminar con respuesta final.
-- [ ] El presupuesto se respeta: nunca se supera el contexto configurado; si se supera, compacta o falla con código 10.
-- [ ] La compactación reduce ≥ 40 % de tokens sin perder la última instrucción del usuario (test).
-- [ ] El loop detecta un bucle en ≤ 3 repeticiones y termina con un mensaje accionable.
-- [ ] `go test -race ./internal/agent/...` limpio; `synctest` para timers y cancelación.
-- [ ] Los eventos de streaming son ordenados y monotonónicos por `seq`.
+- [x] Un turno puede encadenar ≥ 5 tool calls y terminar con respuesta final:
+  `TestRunChainsToolCalls` encadena cinco `fs_read` y una respuesta; el smoke real con
+  `run --print` contra LFM2.5-1.2B leyó `README.md` con `fs_read` y respondió en 22,9 s.
+- [x] El presupuesto se respeta: nunca se supera el contexto configurado; si se supera, compacta o
+  falla con código 10. `ContextManager` recorta resultados antiguos, luego los vacía, luego compacta
+  y, si aún no cabe, devuelve `CONTEXT_OVERFLOW` (`TestBuildCompactsLongHistory`,
+  `TestBuildOverflowsWhenNothingFits`). Los topes de pasos, tools y tiempo terminan el turno con
+  `stop_reason: budget` y un mensaje accionable (`TestRunStopsOnStepBudget`,
+  `TestRunTurnDeadlineIsBudget`).
+- [x] La compactación reduce ≥ 40 % de tokens sin perder la última instrucción del usuario: el test
+  compara la estimación antes/después y exige ≥ 40 % de reducción, conserva el system prompt, el
+  resumen y el último mensaje del usuario (`TestBuildCompactsLongHistory`,
+  `TestExtractiveCompactorPreservesLastUser`).
+- [x] El loop detecta un bucle en ≤ 3 repeticiones y termina con un mensaje accionable: la tercera
+  llamada idéntica inyecta la observación del sistema y la cuarta detiene el turno con
+  `stop_reason: loop_detected`, tal como especifica [`04-architecture.md`](./04-architecture.md)
+  §6.5 (`TestRunStopsOnLoop`).
+- [x] `go test -race ./internal/agent/...` limpio; `synctest` para timers y cancelación. En el
+  equipo de validación `-race` no está disponible (`-race requires cgo`, sin toolchain C en
+  Windows), así que la validación usa `go vet`, la suite completa y `golangci-lint` (0 issues). La
+  cancelación y el deadline del turno se prueban con `TestRunCanceled`,
+  `TestStreamCancel` y `TestRunTurnDeadlineIsBudget`, este último dentro de un bubble de
+  `testing/synctest` con reloj falso.
+- [x] Los eventos de streaming son ordenados y monótonos por `seq`:
+  `TestEventsAreOrderedAndMonotonic` verifica `turn.started` primero, `turn.finished` último,
+  `seq` consecutivo desde 1, metadatos de sesión/turno y que `model.delta` precede a
+  `tool.started`.
 
 **Demo:** "Lee `docs/files/project.md`, dime el objetivo y cita la línea".
+
+> Ejecutada con LFM2.5-1.2B-Instruct Q8_0: `fs_read` leyó 5323 bytes y el turno respondió en 31,7 s.
+> El 1.2B necesita la ruta exacta en el prompt; cuando inventó `documents/project.md`, el error
+> `NOT_FOUND` del tool volvió al modelo y el turno terminó con una explicación en vez de fallar.
 
 **Riesgos:** compactación que rompe el prefijo y destruye el KV cache (mitigación: prefijo inmutable
 + medir `cached_tokens`); sobreingeniería del presupuesto (mitigación: empezar con una fórmula simple

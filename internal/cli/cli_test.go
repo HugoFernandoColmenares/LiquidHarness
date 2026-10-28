@@ -210,6 +210,9 @@ func TestRunPrintJSON(t *testing.T) {
 		Data struct {
 			Answer     string `json:"answer"`
 			Model      string `json:"model"`
+			StopReason string `json:"stop_reason"`
+			Steps      int    `json:"steps"`
+			ToolCalls  int    `json:"tool_calls"`
 			PromptHash string `json:"prompt_hash"`
 		} `json:"data"`
 	}
@@ -221,6 +224,9 @@ func TestRunPrintJSON(t *testing.T) {
 	}
 	if envelope.Data.Model != "fake" || envelope.Data.PromptHash == "" {
 		t.Errorf("incomplete data: %+v", envelope.Data)
+	}
+	if envelope.Data.StopReason != "answer" || envelope.Data.Steps != 1 || envelope.Data.ToolCalls != 0 {
+		t.Errorf("loop data = %+v", envelope.Data)
 	}
 }
 
