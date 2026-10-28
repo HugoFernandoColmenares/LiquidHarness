@@ -27,7 +27,7 @@ jobs:
             --model local --report out/adversarial.json
       - name: Gate
         run: go run ./cmd/liquidharness eval gate --baseline evals/baseline.json --report out/core.json
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: eval-report
