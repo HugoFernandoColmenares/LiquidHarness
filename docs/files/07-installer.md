@@ -32,7 +32,7 @@
 | macOS 13+ | arm64 | `..._darwin_arm64.tar.gz` | Homebrew / script |
 | Linux | amd64 | `..._linux_amd64.tar.gz` | Script / deb / rpm |
 | Linux | arm64 | `..._linux_arm64.tar.gz` | Script |
-| Docker | amd64/arm64 | `ghcr.io/liquidharness/liquidharness:<v>` | `docker run` |
+| Docker | amd64/arm64 | `ghcr.io/hugofernandocolmenares/liquidharness:<v>` | `docker run` |
 
 ### 2.1 Sabores del binario
 
@@ -83,9 +83,9 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
   -trimpath \
   -buildvcs=true \
   -ldflags "-s -w \
-    -X github.com/liquidharness/liquidharness/internal/version.Version=${VERSION} \
-    -X github.com/liquidharness/liquidharness/internal/version.Commit=${COMMIT} \
-    -X github.com/liquidharness/liquidharness/internal/version.Date=${DATE}" \
+    -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Version=${VERSION} \
+    -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Commit=${COMMIT} \
+    -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Date=${DATE}" \
   -o dist/liquidharness.exe ./cmd/liquidharness
 ```
 
@@ -110,9 +110,9 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/liquidharness/liquidharness/internal/version.Version={{.Version}}
-      - -X github.com/liquidharness/liquidharness/internal/version.Commit={{.Commit}}
-      - -X github.com/liquidharness/liquidharness/internal/version.Date={{.Date}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Version={{.Version}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Commit={{.Commit}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Date={{.Date}}
     goos: [windows, darwin, linux]
     goarch: [amd64, arm64]
 
@@ -249,14 +249,14 @@ function Get-Arch {
 
 function Resolve-Version($v) {
     if ($v -ne "latest") { return $v }
-    $r = Invoke-RestMethod "https://api.github.com/repos/liquidharness/liquidharness/releases/latest"
+    $r = Invoke-RestMethod "https://api.github.com/repos/HugoFernandoColmenares/LiquidHarness/releases/latest"
     return $r.tag_name.TrimStart("v")
 }
 
 $arch = Get-Arch
 $ver  = Resolve-Version $Version
 $asset = "liquidharness_${ver}_windows_${arch}.zip"
-$base  = "https://github.com/liquidharness/liquidharness/releases/download/v${ver}"
+$base  = "https://github.com/HugoFernandoColmenares/LiquidHarness/releases/download/v${ver}"
 $tmp   = Join-Path $env:TEMP "liquidharness-$([guid]::NewGuid())"
 
 if ($DryRun) {
@@ -396,13 +396,13 @@ case "$arch" in
 esac
 
 if [ "$VERSION" = "latest" ]; then
-  VERSION="$(curl -fsSL https://api.github.com/repos/liquidharness/liquidharness/releases/latest \
+  VERSION="$(curl -fsSL https://api.github.com/repos/HugoFernandoColmenares/LiquidHarness/releases/latest \
     | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p' | head -n1)"
   [ -n "$VERSION" ] || { echo "cannot resolve latest version" >&2; exit 1; }
 fi
 
 asset="liquidharness_${VERSION}_${os}_${arch}.tar.gz"
-base="https://github.com/liquidharness/liquidharness/releases/download/v${VERSION}"
+base="https://github.com/HugoFernandoColmenares/LiquidHarness/releases/download/v${VERSION}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
@@ -490,7 +490,7 @@ docker run --rm -it \
   -v "$PWD:/workspace" \
   -v "$HOME/.local/share/liquidharness:/data" \
   -p 127.0.0.1:8787:8787 \
-  ghcr.io/liquidharness/liquidharness:1.0.0
+  ghcr.io/hugofernandocolmenares/liquidharness:1.0.0
 ```
 
 - Imagen distroless/no-root.
@@ -627,6 +627,8 @@ Permisos: `0600` en Unix; ACL de usuario en Windows.
 
 - El manifiesto se firma y se sirve desde `get.liquidharness.dev/models.json`.
 - El instalador fija una versión del manifiesto; no confía en el último sin verificar.
+- En F1 el manifiesto va embebido en el binario. `model.manifest` /
+  `LIQUIDHARNESS_MODEL_MANIFEST` aceptan un archivo local o una URL para actualizarlo sin recompilar.
 - Mirror corporativo configurable (`LIQUIDHARNESS_MODEL_MIRROR`).
 
 ### 8.2 Comandos
@@ -653,7 +655,8 @@ liquidharness models path
 ### 8.4 Cache
 
 ```text
-<data>/models/
+<cache>/models/
+├── current
 ├── lfm25-2.6b-q5km/
 │   ├── model.gguf
 │   ├── model.gguf.sha256
@@ -663,7 +666,7 @@ liquidharness models path
 ```
 
 - No se borra al actualizar el binario.
-- `models remove` pide confirmación.
+- `models remove` borra un modelo; el modelo actual exige `--force`.
 - `models verify` recalcula hashes.
 
 ---
@@ -695,7 +698,7 @@ liquidharness models path
 
 ```bash
 cosign verify-blob \
-  --certificate-identity-regexp 'https://github.com/liquidharness/liquidharness/.*' \
+  --certificate-identity-regexp 'https://github.com/HugoFernandoColmenares/LiquidHarness/.*' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   --signature checksums.txt.sig checksums.txt
 sha256sum -c checksums.txt

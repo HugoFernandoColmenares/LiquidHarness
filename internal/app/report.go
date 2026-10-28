@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // Envelope is the stable JSON contract for every command. stdout always contains exactly one

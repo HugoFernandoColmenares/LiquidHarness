@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "models": [
+    {
+      "id": "lfm25-2.6b-q4_0",
+      "name": "LFM2.5-2.6B",
+      "quantization": "Q4_0",
+      "context": 32768,
+      "size_bytes": 1593894912,
+      "sha256": "9081136be5dd7eb95c738622f6c01b7148d6b56683887e212e78d1e46edd0106",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/resolve/main/LFM2.5-2.6B-Q4_0.gguf",
+      "license": "LFM Open License v1.0",
+      "license_url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/blob/main/LICENSE",
+      "min_ram_bytes": 3221225472
+    },
+    {
+      "id": "lfm25-2.6b-q4km",
+      "name": "LFM2.5-2.6B",
+      "quantization": "Q4_K_M",
+      "context": 32768,
+      "size_bytes": 1674455040,
+      "sha256": "06be29a7a518eb44b9630e0ad805ed10a86fc2390e69a8ebf5e939b02b5688d9",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/resolve/main/LFM2.5-2.6B-Q4_K_M.gguf",
+      "license": "LFM Open License v1.0",
+      "license_url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/blob/main/LICENSE",
+      "min_ram_bytes": 4294967296
+    },
+    {
+      "id": "lfm25-2.6b-q5km",
+      "name": "LFM2.5-2.6B",
+      "quantization": "Q5_K_M",
+      "context": 32768,
+      "size_bytes": 1939744768,
+      "sha256": "b1ad1d7a9fae52b168f6d48d5bb9948376e205e1e647035c08d83c4d2227cbd4",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/resolve/main/LFM2.5-2.6B-Q5_K_M.gguf",
+      "license": "LFM Open License v1.0",
+      "license_url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/blob/main/LICENSE",
+      "min_ram_bytes": 5368709120
+    },
+    {
+      "id": "lfm25-2.6b-q6k",
+      "name": "LFM2.5-2.6B",
+      "quantization": "Q6_K",
+      "context": 32768,
+      "size_bytes": 2221615104,
+      "sha256": "3623beb20260bdaf23d5c8ca84446c978e791a94bbabf7991ed7fc0272739a1b",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/resolve/main/LFM2.5-2.6B-Q6_K.gguf",
+      "license": "LFM Open License v1.0",
+      "license_url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/blob/main/LICENSE",
+      "min_ram_bytes": 6442450944
+    },
+    {
+      "id": "lfm25-2.6b-q8_0",
+      "name": "LFM2.5-2.6B",
+      "quantization": "Q8_0",
+      "context": 32768,
+      "size_bytes": 2874779648,
+      "sha256": "ee7d1295f067d6dc62c63e1de4efb10a95c4bdbf2b2e2a44aeedb42b5cc0ad12",
+      "url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/resolve/main/LFM2.5-2.6B-Q8_0.gguf",
+      "license": "LFM Open License v1.0",
+      "license_url": "https://huggingface.co/LiquidAI/LFM2.5-2.6B-GGUF/blob/main/LICENSE",
+      "min_ram_bytes": 8589934592
+    }
+  ]
+}

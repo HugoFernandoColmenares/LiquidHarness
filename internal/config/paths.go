@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // Paths are the OS-specific locations the harness reads and writes.

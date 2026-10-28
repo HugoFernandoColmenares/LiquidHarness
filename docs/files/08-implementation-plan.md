@@ -158,7 +158,7 @@ Cada fase declara: objetivo, entregables, criterios de salida, riesgos específi
 
 **Entregables**
 
-- `go.mod` con Go 1.27, módulo `github.com/liquidharness/liquidharness`.
+- `go.mod` con Go 1.27, módulo `github.com/HugoFernandoColmenares/LiquidHarness`.
 - Árbol inicial de paquetes de [`04-architecture.md`](./04-architecture.md) §4 (vacío pero con doc comments).
 - `cmd/liquidharness/main.go` mínimo + `internal/cli` con `version`, `--help`, `--json`.
 - `internal/version` con `Version`, `Commit`, `Date` por `ldflags`.
@@ -201,18 +201,18 @@ fricción de lint v2 (mitigación: empezar con `default: standard` y añadir lin
 - `internal/llm/supervisor.go`: arranque/parada/health check de `llama-server`.
 - `internal/llm/fake.go`: modelo determinista para tests y evals de PR.
 - `internal/agent/prompt.go`: system prompt versionado (`prompt_hash`).
-- `liquidharness models list|pull|verify|use|path` (descarga y verificación SHA-256).
+- `liquidharness models list|pull|verify|use|remove|path` (descarga y verificación SHA-256).
 - `liquidharness doctor` v1: comprueba endpoint, modelo, DB, permisos y disco.
 - `liquidharness run --print` (one-shot, sin tools todavía).
 
 **Criterios de salida**
 
 - [ ] `run --print "Responde OK"` contra LFM2.5-2.6B Q5_K_M devuelve texto en < 3 s (modelo caliente).
-- [ ] El parser acepta: Pythonic, JSON, llamada múltiple, llamada partida por streaming, texto antes/después.
-- [ ] El parser **rechaza** llamadas malformadas con error tipado, sin ejecutar nada.
-- [ ] `httptest` cubre 200, 400, 429, 500, timeout, body truncado y SSE malformado.
-- [ ] `models verify` detecta un archivo corrupto (hash distinto) y no lo usa.
-- [ ] `doctor --json` devuelve un contrato estable y códigos de salida correctos.
+- [x] El parser acepta: Pythonic, JSON, llamada múltiple, llamada partida por streaming, texto antes/después.
+- [x] El parser **rechaza** llamadas malformadas con error tipado, sin ejecutar nada.
+- [x] `httptest` cubre 200, 400, 429, 500, timeout, body truncado y SSE malformado.
+- [x] `models verify` detecta un archivo corrupto (hash distinto) y no lo usa.
+- [x] `doctor --json` devuelve un contrato estable y códigos de salida correctos.
 - [ ] La cancelación con `Ctrl+C` cierra la conexión en < 200 ms y no deja goroutines.
 
 **Demo:** `liquidharness run --print "Resume este README"` con streaming visible.
@@ -709,8 +709,8 @@ artefactos públicos van en **inglés**; los documentos internos pueden ir en es
 
 > A local-first agent harness for Liquid AI LFM2.5. Your files, your machine, your rules.
 
-[![CI](https://github.com/liquidharness/liquidharness/actions/workflows/ci.yml/badge.svg)](...)
-[![Release](https://img.shields.io/github/v/release/liquidharness/liquidharness)](...)
+[![CI](https://github.com/HugoFernandoColmenares/LiquidHarness/actions/workflows/ci.yml/badge.svg)](...)
+[![Release](https://img.shields.io/github/v/release/HugoFernandoColmenares/LiquidHarness)](...)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 
 LiquidHarness is a single-binary agent runtime that runs LFM2.5 on your computer. It reads,
@@ -1037,7 +1037,7 @@ Reglas:
 ```makefile
 SHELL := /bin/sh
 BINARY := liquidharness
-PKG := github.com/liquidharness/liquidharness
+PKG := github.com/HugoFernandoColmenares/LiquidHarness
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -1172,15 +1172,15 @@ linters:
             - "**/internal/ports/**"
           allow:
             - $gostd
-            - github.com/liquidharness/liquidharness/internal/core
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/core
         agent:
           files:
             - "**/internal/agent/**"
           allow:
             - $gostd
-            - github.com/liquidharness/liquidharness/internal/core
-            - github.com/liquidharness/liquidharness/internal/ports
-            - github.com/liquidharness/liquidharness/internal/policy
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/core
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/ports
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/policy
         adapters:
           files:
             - "**/internal/llm/**"
@@ -1189,9 +1189,9 @@ linters:
             - "**/internal/sandbox/**"
             - "**/internal/mcpclient/**"
           deny:
-            - pkg: github.com/liquidharness/liquidharness/internal/agent
+            - pkg: github.com/HugoFernandoColmenares/LiquidHarness/internal/agent
               desc: adapters must not depend on the agent loop
-            - pkg: github.com/liquidharness/liquidharness/internal/tui
+            - pkg: github.com/HugoFernandoColmenares/LiquidHarness/internal/tui
               desc: adapters must not depend on the TUI
     gosec:
       excludes:
@@ -1212,7 +1212,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/liquidharness/liquidharness
+        - github.com/HugoFernandoColmenares/LiquidHarness
 
 issues:
   max-issues-per-linter: 0
@@ -1247,9 +1247,9 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X github.com/liquidharness/liquidharness/internal/version.Version={{.Version}}
-      - -X github.com/liquidharness/liquidharness/internal/version.Commit={{.Commit}}
-      - -X github.com/liquidharness/liquidharness/internal/version.Date={{.Date}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Version={{.Version}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Commit={{.Commit}}
+      - -X github.com/HugoFernandoColmenares/LiquidHarness/internal/version.Date={{.Date}}
     goos: [windows, darwin, linux]
     goarch: [amd64, arm64]
   - id: embedded
@@ -1607,7 +1607,7 @@ dependencias), captura si toca UI.
 ### 11.12 `go.mod` inicial
 
 ```text
-module github.com/liquidharness/liquidharness
+module github.com/HugoFernandoColmenares/LiquidHarness
 
 go 1.27.0
 

@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/liquidharness/liquidharness/internal/app"
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 func newDoctorCommand(ctx context.Context, a *app.App) *cobra.Command {

@@ -12,9 +12,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/liquidharness/liquidharness/internal/config"
-	"github.com/liquidharness/liquidharness/internal/core"
-	"github.com/liquidharness/liquidharness/internal/telemetry"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/ports"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/telemetry"
 )
 
 // Options injects the process environment for tests.
@@ -24,6 +25,8 @@ type Options struct {
 	LookupEnv   func(string) (string, bool)
 	Getwd       func() (string, error)
 	PathOptions config.PathOptions
+	// NewModel overrides the model factory. Tests use it to inject a fake model.
+	NewModel func(config.Model) (ports.Model, error)
 }
 
 // App holds the configured state shared by every command.
@@ -39,6 +42,8 @@ type App struct {
 	lookupEnv   func(string) (string, bool)
 	getwd       func() (string, error)
 	pathOptions config.PathOptions
+	newModel    func(config.Model) (ports.Model, error)
+	customModel bool
 	flags       config.Flags
 	configured  bool
 }
@@ -57,12 +62,18 @@ func New(opts Options) *App {
 	if opts.Getwd == nil {
 		opts.Getwd = os.Getwd
 	}
+	customModel := opts.NewModel != nil
+	if opts.NewModel == nil {
+		opts.NewModel = defaultModelFactory
+	}
 	return &App{
 		Stdout:      opts.Stdout,
 		Stderr:      opts.Stderr,
 		lookupEnv:   opts.LookupEnv,
 		getwd:       opts.Getwd,
 		pathOptions: opts.PathOptions,
+		newModel:    opts.NewModel,
+		customModel: customModel,
 		Logger:      slog.New(slog.DiscardHandler),
 	}
 }

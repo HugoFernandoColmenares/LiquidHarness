@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Do not report security vulnerabilities here. Use
-        [SECURITY.md](https://github.com/liquidharness/liquidharness/blob/main/SECURITY.md).
+        [SECURITY.md](https://github.com/HugoFernandoColmenares/LiquidHarness/blob/main/SECURITY.md).
         Redact paths, tokens and personal data from logs.
   - type: input
     id: version

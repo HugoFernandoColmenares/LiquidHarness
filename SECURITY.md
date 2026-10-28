@@ -16,7 +16,7 @@ Until `v1.0.0` the project is pre-release and only `main` is supported.
 ## Reporting a vulnerability
 
 **Do not open a public issue.** Report privately through
-[GitHub Security Advisories](https://github.com/liquidharness/liquidharness/security/advisories/new).
+[GitHub Security Advisories](https://github.com/HugoFernandoColmenares/LiquidHarness/security/advisories/new).
 If you cannot use GitHub, email `security@liquidharness.dev` with the subject
 `[SECURITY] LiquidHarness`.
 

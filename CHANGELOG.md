@@ -13,7 +13,7 @@ each milestone.
 
 - Repository foundations: Apache-2.0 license, NOTICE, README, SECURITY, CONTRIBUTING and
   Contributor Covenant 2.1.
-- Go 1.27 module `github.com/liquidharness/liquidharness` with the F0 package skeleton.
+- Go 1.27 module `github.com/HugoFernandoColmenares/LiquidHarness` with the F0 package skeleton.
 - `liquidharness version` with text and `--json` output, build metadata injected via `ldflags`.
 - Configuration loader with TOML (user + project), `.env`, `LIQUIDHARNESS_*` environment
   variables and flags, plus validation with field-level errors.
@@ -22,6 +22,16 @@ each milestone.
 - Structured logging (`slog`) with text/JSON formats and basic secret redaction.
 - CI for Linux, macOS and Windows; lint, security, cross-build and docs jobs.
 - Issue/PR templates, CODEOWNERS, Dependabot and documentation link checker.
+- OpenAI-compatible model client with SSE streaming, cancellation, retries and a typed error for
+  truncated streams.
+- LFM tool-call parser for both `<|tool_call_start|>` JSON and Pythonic payloads, with a versioned
+  system prompt (`prompt_hash`) and a deterministic fake model for tests.
+- `liquidharness ask` and `liquidharness run --print` one-shot paths.
+- `llama-server` supervisor with health checks, stderr capture and autostart when `model.path` or a
+  model selected with `models use` is available.
+- `liquidharness models list|pull|verify|use|remove|path`: embedded manifest, resumable downloads,
+  SHA-256 verification, atomic install and a corporate mirror override.
+- `doctor` v1 checks for the model endpoint, advertised model name, database and free disk space.
 
 ### Changed
 

@@ -5,5 +5,6 @@
 // authorize them, execute them, persist events and detect loops. It orchestrates ports and the
 // policy engine but never imports a concrete adapter.
 //
-// Planned for F2 (loop and context) and refined in F3 (tools) and F4 (resume).
+// F1 provides the versioned system prompt. F2 adds the loop and the context manager; F3 adds
+// tools and F4 adds resume.
 package agent

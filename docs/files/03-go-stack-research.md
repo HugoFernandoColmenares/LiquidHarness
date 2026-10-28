@@ -24,7 +24,7 @@
 ### 1.1 Directiva de módulo
 
 ```go
-module github.com/liquidharness/liquidharness
+module github.com/HugoFernandoColmenares/LiquidHarness
 
 go 1.27.0
 

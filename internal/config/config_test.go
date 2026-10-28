@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/config"
-	"github.com/liquidharness/liquidharness/internal/core"
-	"github.com/liquidharness/liquidharness/internal/policy"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/policy"
 )
 
 func testPaths(t *testing.T) config.Paths {

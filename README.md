@@ -2,7 +2,7 @@
 
 > A local-first agent harness for Liquid AI LFM2.5. Your files, your machine, your rules.
 
-[![CI](https://github.com/liquidharness/liquidharness/actions/workflows/ci.yml/badge.svg)](https://github.com/liquidharness/liquidharness/actions/workflows/ci.yml)
+[![CI](https://github.com/HugoFernandoColmenares/LiquidHarness/actions/workflows/ci.yml/badge.svg)](https://github.com/HugoFernandoColmenares/LiquidHarness/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.27-00ADD8)](go.mod)
 
@@ -10,11 +10,14 @@ LiquidHarness is a single-binary agent runtime that runs LFM2.5 on your computer
 searches, summarizes and edits the files you point it at — with explicit approvals, a workspace
 jail and a full audit trail. No cloud account. No data leaves your machine unless you ask.
 
-> **Project status: F0 — foundations.** The CLI skeleton (`version`, `config`, `doctor`), the
-> configuration loader, the build and the CI pipeline are implemented. The agent loop, tools,
-> storage and TUI are **not** implemented yet; `run`, `serve`, `rag`, `memory`, `eval` and the
-> other product commands currently return `not implemented` and exit with code 1. See the
-> [roadmap](#roadmap) and [`docs/files/08-implementation-plan.md`](docs/files/08-implementation-plan.md).
+> **Project status: F1 — model protocol (in progress).** The CLI skeleton (`version`, `config`,
+> `doctor`, `policy`), the configuration loader, the build and the CI pipeline are implemented.
+> `ask` and `run --print` can talk to an OpenAI-compatible LFM2.5 backend with SSE streaming, the
+> LFM tool-call parser accepts both the JSON and Pythonic formats, and the model manager can
+> download, resume, verify and select GGUF weights. The agent loop, tools, storage, TUI and
+> installers are **not** implemented yet; `serve`, `rag`, `memory`, `eval` and the other product
+> commands currently return `not implemented` and exit with code 1. See the [roadmap](#roadmap)
+> and [`docs/files/08-implementation-plan.md`](docs/files/08-implementation-plan.md).
 
 ## Why
 
@@ -36,8 +39,8 @@ Prebuilt installers and package-manager formulae are published from `v1.0.0` onw
 build from source:
 
 ```bash
-git clone https://github.com/liquidharness/liquidharness.git
-cd liquidharness
+git clone https://github.com/HugoFernandoColmenares/LiquidHarness.git
+cd LiquidHarness
 make build          # or: go build -o bin/liquidharness ./cmd/liquidharness
 ./bin/liquidharness version   # bin\liquidharness.exe on Windows
 ```
@@ -69,16 +72,25 @@ liquidharness config init             # write a commented default config
 liquidharness config validate         # validate file + environment + flags
 liquidharness config show             # effective configuration as TOML
 liquidharness doctor                  # environment diagnostics
+liquidharness models list             # manifest + installed models
+liquidharness models pull lfm25-2.6b-q5km --accept-license
+liquidharness models verify           # re-hash installed weights
+liquidharness models use lfm25-2.6b-q5km
+liquidharness ask "What is a workspace jail?"   # one-shot, no tools
+liquidharness run --print "Responde OK"         # one-shot with SSE streaming
 ```
+
+`models pull` resumes interrupted downloads, verifies the SHA-256 from the manifest and installs
+the weights atomically. `models use` selects the model that `ask` and `run --print` start through
+`llama-server` when `model.autostart` is enabled.
 
 Product commands land in later phases:
 
 ```bash
 liquidharness init                    # hardware detection + model download (F8)
-liquidharness run --print "Summarize docs/README.md"   # F1–F3
+liquidharness run                     # interactive TUI (F5)
 liquidharness rag index ./docs        # F6
 liquidharness eval run --dataset smoke # F8
-liquidharness                         # TUI (F5)
 ```
 
 ## How it works
@@ -124,7 +136,7 @@ the `LIQUIDHARNESS_` prefix and override file values; flags override both. See
 | Phase | Scope | Status |
 | :--- | :--- | :--- |
 | F0 | CLI skeleton, config, doctor, CI | Done |
-| F1 | Model client, streaming, tool-call parser | Planned |
+| F1 | Model client, streaming, tool-call parser | In progress |
 | F2 | Agent loop and context manager | Planned |
 | F3 | Tools, policy, approvals, workspace jail | Planned |
 | F4 | SQLite persistence and sessions | Planned |
@@ -138,6 +150,10 @@ the `LIQUIDHARNESS_` prefix and override file values; flags override both. See
 See [CONTRIBUTING.md](CONTRIBUTING.md). We use trunk-based development, Conventional Commits and
 require tests with every change. By participating you agree to the
 [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Author
+
+Created and maintained by [Hugo Colmenares](https://github.com/HugoFernandoColmenares).
 
 ## License
 

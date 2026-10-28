@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 func TestNewID(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"encoding"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/policy"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/policy"
 )
 
 func TestParseMode(t *testing.T) {

@@ -6,7 +6,7 @@ package config
 import (
 	"time"
 
-	"github.com/liquidharness/liquidharness/internal/policy"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/policy"
 )
 
 // Defaults returns the compiled defaults. They are safe: no shell, no network, ask before

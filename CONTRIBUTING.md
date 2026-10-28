@@ -14,8 +14,8 @@ By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 ## Getting started
 
 ```bash
-git clone https://github.com/liquidharness/liquidharness.git
-cd liquidharness
+git clone https://github.com/HugoFernandoColmenares/LiquidHarness.git
+cd LiquidHarness
 make tools
 make check          # fmt-check + vet + lint + test
 make build

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liquidharness/liquidharness/internal/core"
-	"github.com/liquidharness/liquidharness/internal/policy"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/policy"
 )
 
 type envBinding func(*Config, string) error
@@ -41,6 +41,22 @@ var envBindings = map[string]envBinding{
 	},
 	"LIQUIDHARNESS_MODEL_NAME": func(c *Config, v string) error {
 		c.Model.Name = v
+		return nil
+	},
+	"LIQUIDHARNESS_MODEL_PATH": func(c *Config, v string) error {
+		c.Model.Path = v
+		return nil
+	},
+	"LIQUIDHARNESS_MODEL_SERVER_PATH": func(c *Config, v string) error {
+		c.Model.ServerPath = v
+		return nil
+	},
+	"LIQUIDHARNESS_MODEL_MANIFEST": func(c *Config, v string) error {
+		c.Model.Manifest = v
+		return nil
+	},
+	"LIQUIDHARNESS_MODEL_MIRROR": func(c *Config, v string) error {
+		c.Model.Mirror = v
 		return nil
 	},
 	"LIQUIDHARNESS_MODEL_API_KEY": func(c *Config, v string) error {
@@ -128,6 +144,10 @@ var envBindings = map[string]envBinding{
 }
 
 func applyEnv(cfg *Config, lookup func(string) (string, bool)) error {
+	// Legacy alias, applied first so the canonical variable wins when both are set.
+	if value, ok := lookup("LIQUIDHARNESS_LLAMA_SERVER"); ok && value != "" {
+		cfg.Model.ServerPath = value
+	}
 	for key, bind := range envBindings {
 		value, ok := lookup(key)
 		if !ok || value == "" {
@@ -185,7 +205,7 @@ func applyFlags(cfg *Config, flags Flags) error {
 	if flags.PolicyMode != nil {
 		mode, err := policy.ParseMode(*flags.PolicyMode)
 		if err != nil {
-			return core.Wrap(core.CodeUsage, err, "invalid value for --policy-mode")
+			return core.Wrap(core.CodeUsage, err, "invalid value for --policy")
 		}
 		cfg.Policy.Mode = mode
 	}

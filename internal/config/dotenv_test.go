@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 func TestLoadDotEnv(t *testing.T) {

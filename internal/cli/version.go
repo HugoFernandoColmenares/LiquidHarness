@@ -6,8 +6,8 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/liquidharness/liquidharness/internal/app"
-	"github.com/liquidharness/liquidharness/internal/version"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/version"
 )
 
 func newVersionCommand(a *app.App) *cobra.Command {

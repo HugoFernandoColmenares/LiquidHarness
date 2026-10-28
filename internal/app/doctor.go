@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/fsx"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/llm"
 )
 
 // CheckStatus is the outcome of one diagnostic.
@@ -61,6 +62,7 @@ func (a *App) Doctor(ctx context.Context, skipModelCheck bool) DoctorReport {
 	report.add(a.checkConfigPermissions())
 	report.add(a.checkWorkspace())
 	report.add(a.checkDataDir())
+	report.add(a.checkDisk())
 	report.add(a.checkDatabase())
 	report.add(a.checkSecurityPosture())
 	report.add(a.checkWorkspaceEnvFile())
@@ -201,33 +203,82 @@ func (a *App) checkWorkspaceEnvFile() Check {
 }
 
 func (a *App) checkModelEndpoint(ctx context.Context) Check {
-	parsed, err := url.Parse(a.Config.Model.BaseURL)
-	if err != nil || parsed.Host == "" {
-		return Check{
-			Name: "model_endpoint", Status: StatusFail,
-			Detail: fmt.Sprintf("invalid base_url %q", a.Config.Model.BaseURL),
-		}
+	client, err := llm.New(llm.Config{
+		BaseURL:    a.Config.Model.BaseURL,
+		Model:      a.Config.Model.Name,
+		APIKey:     a.Config.Model.APIKey,
+		Timeout:    2 * time.Second,
+		MaxRetries: 0,
+	})
+	if err != nil {
+		return Check{Name: "model", Status: StatusFail, Detail: err.Error()}
 	}
 
-	host := parsed.Host
-	if parsed.Port() == "" {
-		port := "80"
-		if parsed.Scheme == "https" {
-			port = "443"
-		}
-		host = net.JoinHostPort(parsed.Hostname(), port)
-	}
+	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
-	dialer := net.Dialer{Timeout: 750 * time.Millisecond}
-	conn, err := dialer.DialContext(ctx, "tcp", host)
+	models, err := client.Models(probeCtx)
 	if err != nil {
 		return Check{
-			Name: "model_endpoint", Status: StatusWarn,
-			Detail: fmt.Sprintf("not reachable at %s; start llama-server or change model.base_url", host),
+			Name: "model", Status: StatusWarn,
+			Detail: fmt.Sprintf("not reachable at %s: %v", a.Config.Model.BaseURL, err),
 		}
 	}
-	_ = conn.Close()
-	return Check{Name: "model_endpoint", Status: StatusOK, Detail: "reachable at " + host}
+
+	names := make([]string, 0, len(models))
+	for _, model := range models {
+		if model.ID == a.Config.Model.Name {
+			return Check{
+				Name: "model", Status: StatusOK,
+				Detail: fmt.Sprintf("%s served at %s", model.ID, a.Config.Model.BaseURL),
+			}
+		}
+		names = append(names, model.ID)
+	}
+
+	if len(names) == 0 {
+		return Check{
+			Name: "model", Status: StatusWarn,
+			Detail: "backend reachable but it advertises no models",
+		}
+	}
+	return Check{
+		Name: "model", Status: StatusWarn,
+		Detail: fmt.Sprintf("%q is not advertised; available: %s",
+			a.Config.Model.Name, strings.Join(names, ", ")),
+	}
+}
+
+func (a *App) checkDisk() Check {
+	free, err := fsx.FreeBytes(a.Paths.DataDir)
+	if err != nil {
+		return Check{Name: "disk", Status: StatusWarn, Detail: fmt.Sprintf("cannot measure free space: %v", err)}
+	}
+
+	detail := fmt.Sprintf("%s free in %s", humanBytes(free), a.Paths.DataDir)
+	switch {
+	case free < 500<<20:
+		return Check{Name: "disk", Status: StatusFail, Detail: detail + "; at least 500 MiB is required"}
+	case free < 5<<30:
+		return Check{Name: "disk", Status: StatusWarn, Detail: detail + "; model weights need several GiB"}
+	default:
+		return Check{Name: "disk", Status: StatusOK, Detail: detail}
+	}
+}
+
+func humanBytes(bytes uint64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	divisor := uint64(unit)
+	exponent := 0
+	for value := bytes / unit; value >= unit; value /= unit {
+		divisor *= unit
+		exponent++
+	}
+	return fmt.Sprintf("%.1f %ciB", float64(bytes)/float64(divisor), "KMGTPE"[exponent])
 }
 
 func probeWritable(dir string) error {

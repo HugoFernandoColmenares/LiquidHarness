@@ -44,16 +44,16 @@ linters:
             - "!$test"
           allow:
             - $gostd
-            - github.com/liquidharness/liquidharness/internal/core
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/core
         agent:
           files:
             - "**/internal/agent/**"
             - "!$test"
           allow:
             - $gostd
-            - github.com/liquidharness/liquidharness/internal/core
-            - github.com/liquidharness/liquidharness/internal/ports
-            - github.com/liquidharness/liquidharness/internal/policy
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/core
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/ports
+            - github.com/HugoFernandoColmenares/LiquidHarness/internal/policy
         adapters:
           files:
             - "**/internal/llm/**"
@@ -63,9 +63,9 @@ linters:
             - "**/internal/mcpclient/**"
             - "!$test"
           deny:
-            - pkg: github.com/liquidharness/liquidharness/internal/agent
+            - pkg: github.com/HugoFernandoColmenares/LiquidHarness/internal/agent
               desc: adapters must not depend on the agent loop
-            - pkg: github.com/liquidharness/liquidharness/internal/tui
+            - pkg: github.com/HugoFernandoColmenares/LiquidHarness/internal/tui
               desc: adapters must not depend on the TUI
     gosec:
       excludes:
@@ -86,7 +86,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/liquidharness/liquidharness
+        - github.com/HugoFernandoColmenares/LiquidHarness
 
 issues:
   max-issues-per-linter: 0

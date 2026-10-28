@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // Validate checks every invariant and returns a single error listing all problems, so the user
@@ -65,6 +65,11 @@ func (c Config) Validate() error {
 	}
 	if c.Model.Name == "" {
 		add("model.name must not be empty")
+	}
+	if c.Model.Mirror != "" {
+		if err := validateBaseURL(c.Model.Mirror); err != nil {
+			add("model.mirror %v", err)
+		}
 	}
 	if c.Model.ContextWindow < 1024 || c.Model.ContextWindow > 262144 {
 		add("model.context_window must be between 1024 and 262144, got %d", c.Model.ContextWindow)

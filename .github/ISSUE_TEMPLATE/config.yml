@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/liquidharness/liquidharness/tree/main/docs/files
+    url: https://github.com/HugoFernandoColmenares/LiquidHarness/tree/main/docs/files
     about: Architecture, tool protocol, design guide, installer and testing docs.
   - name: Questions and ideas
-    url: https://github.com/liquidharness/liquidharness/discussions
+    url: https://github.com/HugoFernandoColmenares/LiquidHarness/discussions
     about: Ask a question or discuss a design before opening an issue.
   - name: Security vulnerability
-    url: https://github.com/liquidharness/liquidharness/security/advisories/new
+    url: https://github.com/HugoFernandoColmenares/LiquidHarness/security/advisories/new
     about: Report privately. Never open a public issue for security problems.

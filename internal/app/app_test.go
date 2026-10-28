@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/app"
-	"github.com/liquidharness/liquidharness/internal/config"
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 func newTestApp(t *testing.T) (*app.App, *bytes.Buffer, *bytes.Buffer) {

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
 )
 
 func TestResolvePathsLinux(t *testing.T) {

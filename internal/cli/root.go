@@ -13,10 +13,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/liquidharness/liquidharness/internal/app"
-	"github.com/liquidharness/liquidharness/internal/config"
-	"github.com/liquidharness/liquidharness/internal/core"
-	"github.com/liquidharness/liquidharness/internal/version"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/version"
 )
 
 const skipConfigAnnotation = "liquidharness/skip-config"
@@ -118,12 +118,12 @@ func NewRootCommand(ctx context.Context, a *app.App) *cobra.Command {
 		newConfigCommand(a),
 		newDoctorCommand(ctx, a),
 		newPolicyCommand(a),
-		newRunCommand(a),
-		newAskCommand(a),
+		newRunCommand(ctx, a),
+		newAskCommand(ctx, a),
 		newChatCommand(a),
 		newServeCommand(a),
 		newInitCommand(a),
-		newModelsCommand(a),
+		newModelsCommand(ctx, a),
 		newRAGCommand(a),
 		newMemoryCommand(a),
 		newSessionsCommand(a),
@@ -138,10 +138,11 @@ const rootLong = `LiquidHarness is a local-first agent harness for Liquid AI LFM
 The model runs on your machine. Risky tools require explicit approval, every path is resolved
 through a workspace jail and every action is recorded locally.
 
-Project status: F0. The version, config, doctor and policy commands work. The agent loop,
-tools, storage, TUI and installers are planned for F1-F8.
+Project status: F1. The version, config, doctor, policy and models commands work, and "ask" and
+"run --print" can talk to an OpenAI-compatible LFM2.5 backend. The agent loop, tools, storage,
+TUI and installers are planned for F2-F8.
 
-Documentation: https://github.com/liquidharness/liquidharness/tree/main/docs/files`
+Documentation: https://github.com/HugoFernandoColmenares/LiquidHarness/tree/main/docs/files`
 
 // flagsFrom reads the persistent flags that were explicitly set. Nil pointers mean "not set".
 func flagsFrom(cmd *cobra.Command) config.Flags {
@@ -175,6 +176,18 @@ func flagsFrom(cmd *cobra.Command) config.Flags {
 	if flags.Changed("json") {
 		value, _ := flags.GetBool("json")
 		out.JSON = &value
+	}
+	if flags.Changed("model") {
+		value, _ := flags.GetString("model")
+		out.Model = &value
+	}
+	if flags.Changed("base-url") {
+		value, _ := flags.GetString("base-url")
+		out.BaseURL = &value
+	}
+	if flags.Changed("policy") {
+		value, _ := flags.GetString("policy")
+		out.PolicyMode = &value
 	}
 	return out
 }

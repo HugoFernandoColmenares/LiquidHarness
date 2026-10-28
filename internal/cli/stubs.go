@@ -4,9 +4,13 @@
 package cli
 
 import (
+	"context"
+	"strings"
+
 	"github.com/spf13/cobra"
 
-	"github.com/liquidharness/liquidharness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // stub builds a leaf command that is part of the v1 surface but lands in a later phase. It
@@ -22,34 +26,89 @@ func stub(name, use, short, phase string) *cobra.Command {
 	}
 }
 
-func addAgentFlags(cmd *cobra.Command) {
+func addModelFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
-	flags.StringP("print", "p", "", "run one prompt and print the answer (no TUI)")
-	flags.Bool("yes", false, "auto-approve R1 actions (never R2+)")
-	flags.Bool("deny", false, "deny every action that requires approval")
-	flags.String("allow-risk", "", "auto-approve up to this risk class (R2, R3 or R4)")
 	flags.String("policy", "", "policy mode for this run: read-only, ask or allow")
 	flags.String("model", "", "model name override")
 	flags.String("base-url", "", "OpenAI-compatible base URL override")
 }
 
-func newRunCommand(_ *app.App) *cobra.Command {
-	cmd := stub("run", "run [prompt]", "Run a task with the agent", "F1-F3")
-	cmd.Long = `Run a task with the agent.
+func addAgentFlags(cmd *cobra.Command) {
+	addModelFlags(cmd)
+	flags := cmd.Flags()
+	flags.StringP("print", "p", "", "run one prompt and print the answer (no TUI)")
+	flags.Bool("yes", false, "auto-approve R1 actions (never R2+)")
+	flags.Bool("deny", false, "deny every action that requires approval")
+	flags.String("allow-risk", "", "auto-approve up to this risk class (R2, R3 or R4)")
+}
 
-Without arguments the interactive TUI opens (F5). With --print the answer goes to stdout and
-logs go to stderr, so the command is safe to use in scripts.
+func newRunCommand(ctx context.Context, a *app.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "run [prompt]",
+		Short: "Run a task with the agent",
+		Long: `Run a task with the agent.
 
-Not implemented yet: planned for F1-F3.`
+With --print the answer goes to stdout and logs go to stderr, so the command is safe to use
+in scripts. Without a prompt the interactive TUI opens (planned for F5).`,
+		Args: cobra.ArbitraryArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			interactive, _ := cmd.Flags().GetBool("interactive")
+			if interactive {
+				return notImplemented("run --interactive", "F5")
+			}
+
+			prompt := strings.TrimSpace(strings.Join(args, " "))
+			if cmd.Flags().Changed("print") {
+				if prompt != "" {
+					return core.E(core.CodeUsage,
+						"pass the prompt as an argument or with --print, not both")
+				}
+				printed, _ := cmd.Flags().GetString("print")
+				prompt = strings.TrimSpace(printed)
+				if prompt == "" {
+					return core.E(core.CodeUsage, "--print requires a prompt")
+				}
+			}
+			if prompt == "" {
+				return notImplemented("run (interactive)", "F5")
+			}
+			return runAsk(ctx, a, prompt)
+		},
+	}
 	addAgentFlags(cmd)
 	cmd.Flags().BoolP("interactive", "i", false, "open the interactive TUI")
 	return cmd
 }
 
-func newAskCommand(_ *app.App) *cobra.Command {
-	cmd := stub("ask", "ask <prompt>", "One-shot question without tools", "F1")
-	addAgentFlags(cmd)
+func newAskCommand(ctx context.Context, a *app.App) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "ask <prompt>",
+		Short: "One-shot question without tools",
+		Long: `Ask the model one question and print the answer.
+
+No tools are registered in this path: the model can only answer from the prompt and its own
+knowledge. Use run once the agent loop lands in F2.`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runAsk(ctx, a, strings.Join(args, " "))
+		},
+	}
+	addModelFlags(cmd)
 	return cmd
+}
+
+func runAsk(ctx context.Context, a *app.App, prompt string) error {
+	result, err := a.Ask(ctx, app.AskOptions{Prompt: prompt, Stream: true})
+	if err != nil {
+		return err
+	}
+	if a.JSON {
+		return a.PrintJSON(result)
+	}
+	if !strings.HasSuffix(result.Answer, "\n") {
+		a.Printf("\n")
+	}
+	return nil
 }
 
 func newChatCommand(_ *app.App) *cobra.Command {
@@ -67,24 +126,6 @@ func newInitCommand(_ *app.App) *cobra.Command {
 	cmd := stub("init", "init", "Detect hardware, download a model and run a smoke test", "F8")
 	cmd.Flags().Bool("non-interactive", false, "accept defaults without prompting")
 	cmd.Flags().String("model", "", "model id to download")
-	return cmd
-}
-
-func newModelsCommand(_ *app.App) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "models",
-		Short: "Manage local model weights",
-		Args:  noArgs,
-		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
-	}
-	list := stub("models list", "list", "List available and installed models", "F8")
-	pull := stub("models pull", "pull <id>", "Download and verify a model", "F8")
-	verify := stub("models verify", "verify", "Verify installed model checksums", "F8")
-	use := stub("models use", "use <id>", "Select the default model", "F8")
-	remove := stub("models remove", "remove <id>", "Delete a model from the cache", "F8")
-	path := stub("models path", "path", "Print the model directory", "F8")
-	remove.Flags().Bool("force", false, "delete without confirmation")
-	cmd.AddCommand(list, pull, verify, use, remove, path)
 	return cmd
 }
 

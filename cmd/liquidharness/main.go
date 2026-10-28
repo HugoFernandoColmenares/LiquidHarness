@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/liquidharness/liquidharness/internal/cli"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/cli"
 )
 
 func main() {

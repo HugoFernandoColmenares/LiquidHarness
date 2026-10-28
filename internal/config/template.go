@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // DefaultTOML is the commented template written by `liquidharness config init`.
@@ -30,6 +30,13 @@ telemetry = "off"          # off | local | anonymous
 provider = "openai-compatible"
 base_url = "http://127.0.0.1:8080/v1"
 name = "lfm2.5-2.6b"
+# Optional. path is the GGUF file used when autostart launches llama-server.
+# server_path overrides the llama-server binary found in PATH.
+# manifest and mirror are optional model-manager overrides.
+path = ""
+server_path = ""
+manifest = ""
+mirror = ""
 context_window = 32768
 max_output_tokens = 2048
 temperature = 0.1

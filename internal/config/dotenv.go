@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
 )
 
 // loadDotEnv parses a minimal .env file: KEY=VALUE lines, optional "export " prefix, comments

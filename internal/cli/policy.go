@@ -6,7 +6,7 @@ package cli
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/liquidharness/liquidharness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
 )
 
 func newPolicyCommand(a *app.App) *cobra.Command {

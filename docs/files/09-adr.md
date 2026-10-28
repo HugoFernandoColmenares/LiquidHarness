@@ -101,7 +101,7 @@ Go 1.27 (agosto de 2026) aporta lo que el diseño necesita: `encoding/json/v2` (
 ### Decisión
 
 1. **Go 1.27** como versión mínima y única del proyecto (`go 1.27.0` en `go.mod`).
-2. **Un solo módulo** `github.com/liquidharness/liquidharness`.
+2. **Un solo módulo** `github.com/HugoFernandoColmenares/LiquidHarness`.
 3. **Monolito modular hexagonal**: `cmd/liquidharness` + `internal/{core,ports,agent,policy,tools,llm,store,rag,memory,eval,sandbox,mcpclient,tui,cli,config,fsx,telemetry,version,app}`.
 4. **Un binario** para CLI, TUI y modo headless; sin servicios auxiliares obligatorios (el
    `llama-server` es opcional y gestionado).

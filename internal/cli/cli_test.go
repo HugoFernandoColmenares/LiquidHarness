@@ -11,20 +11,27 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/app"
-	"github.com/liquidharness/liquidharness/internal/cli"
-	"github.com/liquidharness/liquidharness/internal/config"
-	"github.com/liquidharness/liquidharness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/app"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/cli"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/config"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/core"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/llm"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/ports"
 )
 
 func newTestApp(t *testing.T) *app.App {
+	t.Helper()
+	return newTestAppWithModel(t, nil)
+}
+
+func newTestAppWithModel(t *testing.T, model ports.Model) *app.App {
 	t.Helper()
 	workspace := t.TempDir()
 	base := t.TempDir()
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	a := app.New(app.Options{
+	options := app.Options{
 		Stdout:    stdout,
 		Stderr:    stderr,
 		LookupEnv: func(string) (string, bool) { return "", false },
@@ -36,8 +43,11 @@ func newTestApp(t *testing.T) *app.App {
 			UserCacheDir:  func() (string, error) { return filepath.Join(base, "cache"), nil },
 			HomeDir:       func() (string, error) { return filepath.Join(base, "home"), nil },
 		},
-	})
-	return a
+	}
+	if model != nil {
+		options.NewModel = func(config.Model) (ports.Model, error) { return model, nil }
+	}
+	return app.New(options)
 }
 
 func execute(t *testing.T, a *app.App, args ...string) (string, error) {
@@ -177,9 +187,57 @@ func TestPolicyShowJSON(t *testing.T) {
 	}
 }
 
-func TestStubIsNotImplemented(t *testing.T) {
+func TestRunPrintUsesModel(t *testing.T) {
+	a := newTestAppWithModel(t, llm.NewFake("fake", "Hola desde el fake"))
+	output, err := execute(t, a, "run", "--print", "hola")
+	if err != nil {
+		t.Fatalf("run --print: %v", err)
+	}
+	if !strings.Contains(output, "Hola desde el fake") {
+		t.Errorf("output = %q", output)
+	}
+}
+
+func TestRunPrintJSON(t *testing.T) {
+	a := newTestAppWithModel(t, llm.NewFake("fake", "answer"))
+	output, err := execute(t, a, "run", "--print", "hola", "--json")
+	if err != nil {
+		t.Fatalf("run --print --json: %v", err)
+	}
+
+	var envelope struct {
+		OK   bool `json:"ok"`
+		Data struct {
+			Answer     string `json:"answer"`
+			Model      string `json:"model"`
+			PromptHash string `json:"prompt_hash"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(output), &envelope); err != nil {
+		t.Fatalf("decode: %v\n%s", err, output)
+	}
+	if !envelope.OK || envelope.Data.Answer != "answer" {
+		t.Errorf("unexpected envelope: %+v", envelope)
+	}
+	if envelope.Data.Model != "fake" || envelope.Data.PromptHash == "" {
+		t.Errorf("incomplete data: %+v", envelope.Data)
+	}
+}
+
+func TestAskCommand(t *testing.T) {
+	a := newTestAppWithModel(t, llm.NewFake("fake", "respuesta"))
+	output, err := execute(t, a, "ask", "¿qué tal?")
+	if err != nil {
+		t.Fatalf("ask: %v", err)
+	}
+	if !strings.Contains(output, "respuesta") {
+		t.Errorf("output = %q", output)
+	}
+}
+
+func TestRunWithoutPromptIsNotImplemented(t *testing.T) {
 	a := newTestApp(t)
-	_, err := execute(t, a, "run", "--print", "hello")
+	_, err := execute(t, a, "run")
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -188,6 +246,17 @@ func TestStubIsNotImplemented(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "not implemented") {
 		t.Errorf("error = %v", err)
+	}
+}
+
+func TestRunRejectsPromptAndPrintTogether(t *testing.T) {
+	a := newTestAppWithModel(t, llm.NewFake("fake", "answer"))
+	_, err := execute(t, a, "run", "hello", "--print", "world")
+	if err == nil {
+		t.Fatal("expected a usage error")
+	}
+	if !core.Is(err, core.CodeUsage) {
+		t.Errorf("error = %v, want USAGE", err)
 	}
 }
 

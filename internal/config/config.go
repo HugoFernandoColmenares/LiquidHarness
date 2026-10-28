@@ -17,7 +17,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/liquidharness/liquidharness/internal/policy"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/policy"
 )
 
 // CurrentVersion is the configuration schema version understood by this binary.
@@ -54,6 +54,10 @@ type Model struct {
 	Provider          string   `toml:"provider" json:"provider"`
 	BaseURL           string   `toml:"base_url" json:"base_url"`
 	Name              string   `toml:"name" json:"name"`
+	Path              string   `toml:"path" json:"path,omitempty"`
+	ServerPath        string   `toml:"server_path" json:"server_path,omitempty"`
+	Manifest          string   `toml:"manifest" json:"manifest,omitempty"`
+	Mirror            string   `toml:"mirror" json:"mirror,omitempty"`
 	APIKey            string   `toml:"-" json:"api_key,omitempty"`
 	ContextWindow     int      `toml:"context_window" json:"context_window"`
 	MaxOutputTokens   int      `toml:"max_output_tokens" json:"max_output_tokens"`

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liquidharness/liquidharness/internal/telemetry"
+	"github.com/HugoFernandoColmenares/LiquidHarness/internal/telemetry"
 )
 
 func TestRedact(t *testing.T) {
