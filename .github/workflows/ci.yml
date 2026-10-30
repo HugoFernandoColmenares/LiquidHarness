@@ -30,6 +30,8 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - name: Test
+        # bash on every OS: PowerShell splits "-coverprofile=coverage.txt" at the dot.
+        shell: bash
         run: go test -shuffle=on -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Test (race)
         if: matrix.os != 'windows-latest'
@@ -52,7 +54,7 @@ jobs:
           cache: true
       - uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.15.0
 
   security:
     name: security

@@ -6,6 +6,7 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -90,6 +91,7 @@ type Options struct {
 
 // NewReadOnly builds the F2 catalog: fs_read, fs_list and fs_search, all confined to root.
 func NewReadOnly(root string) (*Registry, error) {
+	root = canonicalRoot(root)
 	registry := NewRegistry()
 	for _, tool := range []ports.Tool{
 		newFSRead(root),
@@ -107,6 +109,7 @@ func NewReadOnly(root string) (*Registry, error) {
 // fs_move and todo_write. Callers in read-only mode must use NewReadOnly so the model never sees
 // a write tool it cannot use.
 func NewWorkspace(root string, opts Options) (*Registry, error) {
+	root = canonicalRoot(root)
 	registry := NewRegistry()
 	for _, tool := range []ports.Tool{
 		newFSRead(root),
@@ -123,4 +126,20 @@ func NewWorkspace(root string, opts Options) (*Registry, error) {
 		}
 	}
 	return registry, nil
+}
+
+// canonicalRoot returns root as an absolute path with symlinks resolved, so that paths the
+// tools compute (which fsx.ResolveWithin returns fully resolved) stay relative to the same
+// base. On macOS, for example, /var is a symlink to /private/var. If root cannot be resolved
+// it is returned unchanged and ResolveWithin reports the error on first use.
+func canonicalRoot(root string) string {
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return root
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return abs
+	}
+	return resolved
 }

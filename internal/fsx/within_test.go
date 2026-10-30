@@ -53,8 +53,17 @@ func TestResolveWithin(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ResolveWithin(%q): %v", test.rel, err)
 			}
-			if !samePath(got, test.want) {
-				t.Errorf("ResolveWithin(%q) = %q, want %q", test.rel, got, test.want)
+			// ResolveWithin returns symlink-resolved paths; t.TempDir may sit under a symlink
+			// (macOS /var -> /private/var, Windows 8.3 short names), so compare against the
+			// resolved spelling of the expected path.
+			want := test.want
+			if rel, relErr := filepath.Rel(root, want); relErr == nil {
+				if resolvedRoot, evalErr := filepath.EvalSymlinks(root); evalErr == nil {
+					want = filepath.Join(resolvedRoot, rel)
+				}
+			}
+			if !samePath(got, want) {
+				t.Errorf("ResolveWithin(%q) = %q, want %q", test.rel, got, want)
 			}
 		})
 	}

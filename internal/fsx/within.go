@@ -50,15 +50,25 @@ func ResolveWithin(root, rel string) (string, error) {
 		return "", fmt.Errorf("%w: resolve root symlinks: %w", ErrInvalidPath, err)
 	}
 
+	// A relative path is joined to the resolved root. An absolute path may be spelled through
+	// the unresolved root (for example /var/... when the root resolves to /private/var/...),
+	// so it is checked lexically against both spellings here; the symlink-resolved result is
+	// checked against the resolved root below, which is the check that enforces the jail.
 	candidate := rel
-	if !filepath.IsAbs(candidate) {
+	lexicalRoot := rootResolved
+	if filepath.IsAbs(candidate) {
+		cleaned := filepath.Clean(candidate)
+		if !within(rootResolved, cleaned) && within(rootAbs, cleaned) {
+			lexicalRoot = rootAbs
+		}
+	} else {
 		candidate = filepath.Join(rootResolved, candidate)
 	}
 	candidate, err = filepath.Abs(candidate)
 	if err != nil {
 		return "", fmt.Errorf("%w: resolve %q: %w", ErrInvalidPath, rel, err)
 	}
-	if !within(rootResolved, candidate) {
+	if !within(lexicalRoot, candidate) {
 		return "", fmt.Errorf("%w: %q", ErrOutsideRoot, rel)
 	}
 
